@@ -36,11 +36,17 @@ app.get('/', (req, res) => {
   res.json({ 
     message: 'Welcome to Nuwendo API',
     version: '1.0.0',
+    timestamp: new Date().toISOString(),
     endpoints: {
       health: '/api/health',
       auth: '/api/auth/*'
     }
   });
+});
+
+// Simple ping endpoint for Railway health check
+app.get('/ping', (req, res) => {
+  res.status(200).send('OK');
 });
 
 // Basic health check without database
