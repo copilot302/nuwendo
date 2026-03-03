@@ -9,7 +9,7 @@ const { Pool } = pg;
 const pool = process.env.DATABASE_URL 
   ? new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      ssl: false  // Railway internal network doesn't need SSL
     })
   : new Pool({
       user: process.env.DB_USER || 'postgres',
