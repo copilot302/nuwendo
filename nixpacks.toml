@@ -2,10 +2,7 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --prefix backend --omit=dev"]
-
-[phases.build]
-cmds = ["echo 'No build step required'"]
+cmds = ["cd backend && npm install --production"]
 
 [start]
-cmd = "npm start --prefix backend"
+cmd = "cd backend && node server.js"

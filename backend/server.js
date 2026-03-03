@@ -31,6 +31,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  next();
+});
+
 // Routes
 app.get('/', (req, res) => {
   res.json({ 
@@ -121,4 +127,6 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.listen(PORT, HOST, () => {
   console.log(`✓ Server is running on ${HOST}:${PORT}`);
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`✓ CORS Origin: ${process.env.CORS_ORIGIN || 'https://frontend-liart-six-87.vercel.app'}`);
+  console.log(`✓ Server ready to accept connections`);
 });
