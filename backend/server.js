@@ -13,6 +13,49 @@ import shopRoutes from './src/routes/shop.js';
 import patientShopRoutes from './src/routes/patientShop.js';
 import rescheduleRoutes from './src/routes/reschedule.js';
 import pool from './src/config/database.js';
+import { spawn } from 'child_process';
+
+// Check and run migrations if needed
+const checkAndMigrate = async () => {
+  try {
+    // Check if admin_users table exists
+    const result = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'admin_users'
+      );
+    `);
+    
+    if (!result.rows[0].exists) {
+      console.log('\n⚠️  Database tables not found. Running migrations...\n');
+      
+      return new Promise((resolve) => {
+        const proc = spawn('npm', ['run', 'migrate'], {
+          cwd: './database',
+          stdio: 'inherit',
+          shell: true
+        });
+        
+        proc.on('close', (code) => {
+          if (code !== 0) {
+            console.error('\n❌ Migrations failed. Continuing anyway...\n');
+          } else {
+            console.log('\n✅ Migrations completed successfully\n');
+          }
+          resolve();
+        });
+      });
+    } else {
+      console.log('✓ Database tables exist');
+    }
+  } catch (error) {
+    console.error('Migration check error:', error.message);
+  }
+};
+
+// Run migration check before starting server
+await checkAndMigrate();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
