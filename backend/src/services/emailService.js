@@ -8,12 +8,20 @@ const createTransporter = () => {
   // To actually send emails, configure with real SMTP settings
   
   if (process.env.EMAIL_SERVICE === 'gmail') {
+    console.log('📧 Configuring Gmail transporter');
+    console.log('EMAIL_USER exists:', !!process.env.EMAIL_USER);
+    console.log('EMAIL_PASSWORD exists:', !!process.env.EMAIL_PASSWORD);
+    
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
-      }
+      },
+      pool: true,
+      maxConnections: 1,
+      rateDelta: 20000,
+      rateLimit: 5
     });
   }
   
@@ -81,7 +89,19 @@ export const sendVerificationEmail = async (email, code) => {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
+    console.log('📧 Attempting to send verification email to:', email);
+    
+    // Add timeout to prevent hanging
+    const sendWithTimeout = Promise.race([
+      transporter.sendMail(mailOptions),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Email sending timeout')), 10000)
+      )
+    ]);
+    
+    const info = await sendWithTimeout;
+    
+    console.log('✅ Email sent successfully');
     
     // For development, log the email
     if (process.env.NODE_ENV === 'development') {
@@ -93,8 +113,8 @@ export const sendVerificationEmail = async (email, code) => {
     
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email sending error:', error);
-    throw new Error('Failed to send verification email');
+    console.error('❌ Email sending error:', error.message);
+    throw new Error('Failed to send verification email: ' + error.message);
   }
 };
 
