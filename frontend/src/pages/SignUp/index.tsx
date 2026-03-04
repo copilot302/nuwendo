@@ -21,13 +21,23 @@ export default function SignUp() {
     setIsLoading(true)
 
     try {
+      console.log('Sending verification code request...')
+      
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      
       const response = await fetch(`${BASE_URL}/api/auth/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       const data = await response.json()
+      console.log('Response received:', data)
 
       if (!response.ok) {
         // If user already exists, redirect to login
@@ -47,14 +57,21 @@ export default function SignUp() {
       sessionStorage.setItem('signupEmail', email)
       
       // If email service failed and code is provided in response, store it
+      console.log('Checking for code in response:', data.data)
       if (data.data?.code) {
+        console.log('Code found, storing:', data.data.code)
         sessionStorage.setItem('tempVerificationCode', data.data.code)
         alert(`Email service is temporarily down. Your verification code is: ${data.data.code}\n\nIt will be auto-filled on the next page.`)
       }
       
       navigate('/verify-code')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      console.error('Signup error:', err)
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Something went wrong')
+      }
     } finally {
       setIsLoading(false)
     }

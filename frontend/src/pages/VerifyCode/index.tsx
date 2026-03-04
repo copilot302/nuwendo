@@ -102,17 +102,29 @@ export default function VerifyCode() {
     setIsResending(true)
     
     try {
+      console.log('Resending verification code...')
+      
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      
       const response = await fetch(`${BASE_URL}/api/auth/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       const data = await response.json()
+      console.log('Resend response received:', data)
       
       if (response.ok) {
         // If email service failed and code is provided in response, auto-fill it
+        console.log('Checking for code in resend response:', data.data)
         if (data.data?.code) {
+          console.log('Code found in resend, auto-filling:', data.data.code)
           alert(`Email service is temporarily down. Your verification code is: ${data.data.code}`)
           const digits = data.data.code.split('')
           setCode(digits)
@@ -124,7 +136,12 @@ export default function VerifyCode() {
         setError('')
       }
     } catch (err) {
-      setError('Failed to resend code')
+      console.error('Resend error:', err)
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.')
+      } else {
+        setError('Failed to resend code')
+      }
     } finally {
       setIsResending(false)
     }

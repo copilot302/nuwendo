@@ -38,13 +38,23 @@ export default function Login() {
     setIsLoading(true)
 
     try {
+      console.log('Sending login code request...')
+      
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      
       const response = await fetch(`${BASE_URL}/api/auth/patient-login/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
 
       const data = await response.json()
+      console.log('Login response received:', data)
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to send verification code')
@@ -59,7 +69,9 @@ export default function Login() {
         sessionStorage.setItem('loginEmail', email)
         
         // If email service failed and code is provided in response, store it
+        console.log('Checking for code in login response:', data.data)
         if (data.data?.code) {
+          console.log('Code found in login, storing:', data.data.code)
           sessionStorage.setItem('tempLoginCode', data.data.code)
           alert(`Email service is temporarily down. Your verification code is: ${data.data.code}\n\nIt will be auto-filled.`)
           
@@ -72,7 +84,12 @@ export default function Login() {
         setTimeLeft(60)
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to send verification code')
+      console.error('Login email submit error:', err)
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Please try again.')
+      } else {
+        setError(err.message || 'Failed to send verification code')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -177,17 +194,30 @@ export default function Login() {
     setIsResending(true)
     setError('')
     try {
+      console.log('Resending login code...')
+      
+      // Add timeout to fetch request
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
+      
       const response = await fetch(`${BASE_URL}/api/auth/patient-login/send-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
+        signal: controller.signal
       })
       
+      clearTimeout(timeoutId)
+      
       const data = await response.json()
+      console.log('Resend login response received:', data)
+      
       if (!response.ok) throw new Error('Failed to resend code')
       
       // If email service failed and code is provided in response, auto-fill it
+      console.log('Checking for code in resend login response:', data.data)
       if (data.data?.code) {
+        console.log('Code found in resend login, auto-filling:', data.data.code)
         alert(`Email service is temporarily down. Your verification code is: ${data.data.code}`)
         const digits = data.data.code.split('')
         setCode(digits)
@@ -197,7 +227,12 @@ export default function Login() {
       
       setTimeLeft(60)
     } catch (err: any) {
-      setError(err.message || 'Failed to resend verification code')
+      console.error('Resend login error:', err)
+      if (err.name === 'AbortError') {
+        setError('Request timed out. Please try again.')
+      } else {
+        setError(err.message || 'Failed to resend verification code')
+      }
     } finally {
       setIsResending(false)
     }
