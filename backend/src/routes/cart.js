@@ -174,7 +174,16 @@ router.post('/checkout', authMiddleware, async (req, res) => {
   const client = await pool.connect();
   try {
     const userId = req.user.userId;
-    const { notes, payment_receipt_url } = req.body;
+    const { 
+      notes, 
+      payment_receipt_url,
+      payment_qr_reference,
+      use_default_address,
+      delivery_province,
+      delivery_city,
+      delivery_barangay,
+      delivery_street_address
+    } = req.body;
 
     await client.query('BEGIN');
 
@@ -201,12 +210,16 @@ router.post('/checkout', authMiddleware, async (req, res) => {
       return sum + (item.quantity * parseFloat(item.variant_price || 0));
     }, 0);
 
-    // Create order
+    // Create order with delivery address and payment info
     const orderResult = await client.query(
-      `INSERT INTO shop_orders (user_id, total_amount, status, notes, payment_receipt_url)
-       VALUES ($1, $2, 'pending', $3, $4)
+      `INSERT INTO shop_orders (
+        user_id, total_amount, status, notes, payment_receipt_url, payment_qr_reference,
+        use_default_address, delivery_province, delivery_city, delivery_barangay, delivery_street_address
+      )
+       VALUES ($1, $2, 'pending', $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [userId, total, notes, payment_receipt_url]
+      [userId, total, notes, payment_receipt_url, payment_qr_reference,
+       use_default_address, delivery_province, delivery_city, delivery_barangay, delivery_street_address]
     );
 
     const orderId = orderResult.rows[0].id;
