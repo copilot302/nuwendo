@@ -145,51 +145,6 @@ export const updatePatientProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
-      [userId]
-    );
-
-    // Build medical_conditions JSON with extra fields
-    const medicalConditionsData = JSON.stringify({
-      age: age || '',
-      height: height || '',
-      weight: weight || '',
-      reasonForConsult: reasonForConsult || '',
-      healthGoals: healthGoals || []
-    });
-
-    if (profileExists.rows.length === 0) {
-      // Create new profile with all address fields
-      await pool.query(
-        `INSERT INTO patient_profiles (user_id, phone_number, address, province, city, barangay, street_address, medical_conditions)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [userId, phone || '', address || '', province || '', city || '', barangay || '', street_address || '', medicalConditionsData]
-      );
-    } else {
-      // Update existing profile with all address fields
-      await pool.query(
-        `UPDATE patient_profiles 
-         SET phone_number = COALESCE($1, phone_number),
-             address = COALESCE($2, address),
-             province = COALESCE($3, province),
-             city = COALESCE($4, city),
-             barangay = COALESCE($5, barangay),
-             street_address = COALESCE($6, street_address),
-             medical_conditions = COALESCE($7, medical_conditions),
-             updated_at = NOW()
-         WHERE user_id = $8`,
-        [phone, address, province, city, barangay, street_address, medicalConditionsData, userId]
-      );
-    }
-
-    res.json({
-      success: true,
-      message: 'Profile updated successfully'
-    });
-  } catch (error) {
-    console.error('Update patient profile error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
 
 // Get full patient profile with extended details by email
 export const getFullPatientProfile = async (req, res) => {
