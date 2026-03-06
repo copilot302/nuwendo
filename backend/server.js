@@ -12,6 +12,7 @@ import googleAuthRoutes from './src/routes/googleAuth.js';
 import shopRoutes from './src/routes/shop.js';
 import patientShopRoutes from './src/routes/patientShop.js';
 import rescheduleRoutes from './src/routes/reschedule.js';
+import cartRoutes from './src/routes/cart.js';
 import pool from './src/config/database.js';
 import { spawn } from 'child_process';
 
@@ -158,6 +159,7 @@ app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/shop', shopRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/shop', patientShopRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/oauth', googleAuthRoutes); // Google OAuth routes
 
 // Error handling middleware

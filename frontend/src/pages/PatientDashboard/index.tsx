@@ -19,8 +19,13 @@ import {
   Loader2,
   Video,
   ExternalLink,
-  CalendarClock
+  CalendarClock,
+  ShoppingCart,
+  Plus,
+  Minus
 } from 'lucide-react'
+import CartModal from '@/components/CartModal'
+import { cartService } from '@/services/cartService'
 
 interface Appointment {
   id: number
@@ -95,6 +100,15 @@ export default function PatientDashboard() {
     reasonForConsult: ''
   })
 
+  // Shopping cart states
+  const [showCartModal, setShowCartModal] = useState(false)
+  const [cartItemCount, setCartItemCount] = useState(0)
+  const [selectedShopItem, setSelectedShopItem] = useState<any>(null)
+  const [selectedVariant, setSelectedVariant] = useState<any>(null)
+  const [itemQuantity, setItemQuantity] = useState(1)
+  const [addingToCart, setAddingToCart] = useState(false)
+  const [cartMessage, setCartMessage] = useState<{type: 'success' | 'error', text: string} | null>(null)
+
   useEffect(() => {
     const patientEmail = sessionStorage.getItem('patientEmail')
     
@@ -125,6 +139,13 @@ export default function PatientDashboard() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [navigate])
+
+  // Load cart count when accessing shop
+  useEffect(() => {
+    if (activeTab === 'shop' && hasShopAccess) {
+      loadCartCount()
+    }
+  }, [activeTab, hasShopAccess])
 
   const checkShopAccess = async () => {
     try {
@@ -514,6 +535,42 @@ export default function PatientDashboard() {
     navigate('/choose-service')
   }
 
+  // Cart functions
+  const loadCartCount = async () => {
+    try {
+      const cart = await cartService.getCart()
+      setCartItemCount(cart.itemCount)
+    } catch (err) {
+      console.error('Failed to load cart count:', err)
+    }
+  }
+
+  const handleItemClick = (item: any) => {
+    setSelectedShopItem(item)
+    setSelectedVariant(item.variants?.[0] || null)
+    setItemQuantity(1)
+    setCartMessage(null)
+  }
+
+  const handleAddToCart = async () => {
+    if (!selectedShopItem || !selectedVariant) return
+    
+    try {
+      setAddingToCart(true)
+      await cartService.addToCart(selectedShopItem.id, selectedVariant.id, itemQuantity)
+      setCartMessage({ type: 'success', text: 'Added to cart!' })
+      loadCartCount()
+      setTimeout(() => {
+        setSelectedShopItem(null)
+        setCartMessage(null)
+      }, 1500)
+    } catch (err: any) {
+      setCartMessage({ type: 'error', text: err.message || 'Failed to add to cart' })
+    } finally {
+      setAddingToCart(false)
+    }
+  }
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -837,9 +894,24 @@ export default function PatientDashboard() {
 
         {activeTab === 'shop' && (
           <div className="space-y-6">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">Shop</h1>
-              <p className="text-gray-600">Browse and purchase available products</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold text-gray-900">Shop</h1>
+                <p className="text-gray-600">Browse and purchase available products</p>
+              </div>
+              <Button
+                onClick={() => setShowCartModal(true)}
+                variant="outline"
+                className="relative"
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                Cart
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-brand text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Button>
             </div>
 
             {shopItems.length === 0 ? (
@@ -885,8 +957,12 @@ export default function PatientDashboard() {
                           </div>
                         ) : null}
 
-                        <Button className="w-full bg-brand hover:bg-brand/90">
-                          Order
+                        <Button 
+                          onClick={() => handleItemClick(item)}
+                          className="w-full bg-brand hover:bg-brand/90"
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Add to Cart
                         </Button>
                       </div>
                     </CardContent>
@@ -894,6 +970,149 @@ export default function PatientDashboard() {
                 ))}
               </div>
             )}
+
+            {/* Item Selection Modal */}
+            {selectedShopItem && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-white rounded-xl max-w-md w-full p-6 space-y-4"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold text-gray-900">
+                        {selectedShopItem.name}
+                      </h3>
+                      {selectedShopItem.category && (
+                        <p className="text-sm text-brand">{selectedShopItem.category}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setSelectedShopItem(null)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {selectedShopItem.description && (
+                    <p className="text-sm text-gray-600">{selectedShopItem.description}</p>
+                  )}
+
+                  {/* Variant Selection */}
+                  {selectedShopItem.variants && selectedShopItem.variants.length > 0 && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Select Variant:</label>
+                      <div className="space-y-2">
+                        {selectedShopItem.variants.map((variant: any) => (
+                          <button
+                            key={variant.id}
+                            onClick={() => setSelectedVariant(variant)}
+                            className={`w-full p-3 border-2 rounded-lg text-left transition-all ${
+                              selectedVariant?.id === variant.id
+                                ? 'border-brand bg-brand-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-gray-900">{variant.name}</span>
+                              <span className="font-semibold text-brand">
+                                ₱{parseFloat(variant.price).toLocaleString()}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quantity Selector */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Quantity:</label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => setItemQuantity(Math.max(1, itemQuantity - 1))}
+                        disabled={itemQuantity <= 1}
+                        className="p-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
+                      <span className="w-12 text-center font-medium">{itemQuantity}</span>
+                      <button
+                        onClick={() => setItemQuantity(itemQuantity + 1)}
+                        className="p-2 border rounded-lg hover:bg-gray-50"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Total Price */}
+                  {selectedVariant && (
+                    <div className="pt-3 border-t">
+                      <div className="flex justify-between items-center text-lg">
+                        <span className="font-medium text-gray-700">Total:</span>
+                        <span className="font-bold text-brand">
+                          ₱{(parseFloat(selectedVariant.price) * itemQuantity).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Messages */}
+                  {cartMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-3 rounded-lg ${
+                        cartMessage.type === 'success'
+                          ? 'bg-green-50 text-green-700 border border-green-200'
+                          : 'bg-red-50 text-red-700 border border-red-200'
+                      }`}
+                    >
+                      {cartMessage.text}
+                    </motion.div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => setSelectedShopItem(null)}
+                      variant="outline"
+                      className="flex-1"
+                      disabled={addingToCart}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleAddToCart}
+                      className="flex-1 bg-brand hover:bg-brand/90"
+                      disabled={addingToCart || !selectedVariant}
+                    >
+                      {addingToCart ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Add to Cart
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
+            )}
+
+            {/* Cart Modal */}
+            <CartModal
+              open={showCartModal}
+              onClose={() => setShowCartModal(false)}
+              onCartUpdate={loadCartCount}
+            />
           </div>
         )}
 
