@@ -152,11 +152,15 @@ export const verifyCode = async (req, res) => {
       [user.id]
     );
 
+    // Issue a JWT so the session is fully authenticated from this point onward
+    const token = generateToken(user.id, user.email);
+
     res.json({
       success: true,
       message: 'Code verified successfully',
       data: {
-        email: user.email
+        email: user.email,
+        token
       }
     });
   } catch (error) {
