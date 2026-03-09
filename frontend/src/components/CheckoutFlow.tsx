@@ -364,33 +364,34 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
       >
         {step === 1 && (
           <div className="space-y-4">
-            <h3 className="font-semibold text-lg">Delivery Address</h3>
 
-            {/* Recipient Info */}
-            <div className="p-3 border rounded-lg bg-gray-50 space-y-3">
-              <h4 className="text-sm font-medium text-gray-700">Recipient Details</h4>
-              <div>
+            {/* Recipient Details */}
+            <h3 className="font-semibold text-lg">Recipient Details</h3>
+            <div className="space-y-3">
+              <div className="p-3 border rounded-lg space-y-1">
                 <Label htmlFor="recipient-name">Full Name</Label>
                 <Input
                   id="recipient-name"
                   value={recipientName}
                   onChange={(e) => setRecipientName(e.target.value)}
                   placeholder="e.g. Juan dela Cruz"
-                  className="mt-1 bg-white"
+                  className="mt-1"
                 />
               </div>
-              <div>
+              <div className="p-3 border rounded-lg space-y-1">
                 <Label htmlFor="recipient-phone">Phone Number</Label>
                 <Input
                   id="recipient-phone"
                   value={recipientPhone}
                   onChange={(e) => setRecipientPhone(e.target.value)}
                   placeholder="e.g. 09123456789"
-                  className="mt-1 bg-white"
+                  className="mt-1"
                 />
               </div>
             </div>
-            
+
+            {/* Delivery Address */}
+            <h3 className="font-semibold text-lg">Delivery Address</h3>
             <RadioGroup value={useDefaultAddress ? 'default' : 'custom'} onValueChange={(val: string) => setUseDefaultAddress(val === 'default')}>
               <div className="space-y-3">
                 <div className="flex items-start space-x-2 p-3 border rounded-lg">
