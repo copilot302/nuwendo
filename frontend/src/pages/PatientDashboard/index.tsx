@@ -1096,6 +1096,17 @@ export default function PatientDashboard() {
 
         {activeTab === 'shop' && (
           <div className="space-y-6">
+            {!(localStorage.getItem('authToken') || sessionStorage.getItem('authToken')) && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
+                <p className="text-yellow-800 text-sm font-medium">Your session needs to be refreshed to use the shop.</p>
+                <button
+                  onClick={() => { sessionStorage.clear(); localStorage.removeItem('authToken'); navigate('/login') }}
+                  className="ml-4 px-4 py-1.5 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700"
+                >
+                  Log in again
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-2xl font-semibold text-gray-900">Shop</h1>

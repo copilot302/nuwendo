@@ -1,11 +1,11 @@
 import express from 'express';
 import pool from '../config/database.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { flexibleAuthMiddleware } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get user's cart
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', flexibleAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
 
@@ -64,7 +64,7 @@ router.get('/', authMiddleware, async (req, res) => {
 });
 
 // Add item to cart
-router.post('/add', authMiddleware, async (req, res) => {
+router.post('/add', flexibleAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { shop_item_id, variant_id, quantity = 1 } = req.body;
@@ -109,7 +109,7 @@ router.post('/add', authMiddleware, async (req, res) => {
 });
 
 // Update cart item quantity
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', flexibleAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
@@ -136,7 +136,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
 });
 
 // Remove item from cart
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', flexibleAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
@@ -158,7 +158,7 @@ router.delete('/:id', authMiddleware, async (req, res) => {
 });
 
 // Clear entire cart
-router.delete('/', authMiddleware, async (req, res) => {
+router.delete('/', flexibleAuthMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
     await pool.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
@@ -170,7 +170,7 @@ router.delete('/', authMiddleware, async (req, res) => {
 });
 
 // Checkout - create order from cart
-router.post('/checkout', authMiddleware, async (req, res) => {
+router.post('/checkout', flexibleAuthMiddleware, async (req, res) => {
   const client = await pool.connect();
   try {
     const userId = req.user.userId;
