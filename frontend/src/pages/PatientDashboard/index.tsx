@@ -1173,7 +1173,6 @@ export default function PatientDashboard() {
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <p className="font-semibold text-gray-900">Order #{order.id}</p>
                               <p className="text-sm text-gray-500">
                                 {new Date(order.created_at).toLocaleDateString('en-US', {
                                   month: 'short', day: 'numeric', year: 'numeric'
