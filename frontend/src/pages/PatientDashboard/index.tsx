@@ -195,7 +195,7 @@ export default function PatientDashboard() {
 
   const checkShopAccess = async () => {
     try {
-      const token = sessionStorage.getItem('authToken')
+      const token = localStorage.getItem('authToken')
       const email = sessionStorage.getItem('patientEmail')
       
       // If no token, use email-based endpoint (for legacy sessions)
@@ -237,7 +237,7 @@ export default function PatientDashboard() {
 
   const fetchShopItems = async () => {
     try {
-      const token = sessionStorage.getItem('authToken')
+      const token = localStorage.getItem('authToken')
       const email = sessionStorage.getItem('patientEmail')
       
       // If no token, use email-based endpoint (for legacy sessions)
@@ -525,6 +525,7 @@ export default function PatientDashboard() {
 
   const handleLogout = () => {
     sessionStorage.clear()
+    localStorage.removeItem('authToken')
     navigate('/')
   }
 
