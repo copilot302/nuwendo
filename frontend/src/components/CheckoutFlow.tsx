@@ -33,6 +33,9 @@ interface Barangay {
 }
 
 interface PatientProfile {
+  firstName?: string
+  lastName?: string
+  phone?: string
   region?: string
   province?: string
   city?: string
@@ -121,7 +124,17 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
     })
     const data = await response.json()
     if (data.success) {
-      return data.profile || {}
+      const p = data.profile || {}
+      return {
+        firstName: p.firstName || '',
+        lastName: p.lastName || '',
+        phone: p.phone || '',
+        region: p.region || '',
+        province: p.province || '',
+        city: p.city || '',
+        barangay: p.barangay || '',
+        street_address: p.street_address || '',
+      }
     }
     return {}
   }
@@ -279,26 +292,24 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
   return (
     <div className="space-y-6">
       {/* Step Indicator */}
-      <div className="flex items-center justify-between">
-        {[1, 2, 3].map((s) => (
-          <div key={s} className="flex items-center flex-1">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-              s === step ? 'bg-brand text-white' : s < step ? 'bg-green-500 text-white' : 'bg-gray-200'
-            }`}>
-              {s < step ? <CheckCircle className="w-5 h-5" /> : s}
+      <div className="flex items-center">
+        {[1, 2, 3].map((s, i) => (
+          <div key={s} className="flex items-center flex-1 last:flex-none">
+            <div className="flex flex-col items-center">
+              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${
+                s < step ? 'bg-green-500 text-white' : s === step ? 'bg-brand text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {s < step ? <CheckCircle className="w-5 h-5" /> : s}
+              </div>
+              <span className={`mt-1 text-xs ${s === step ? 'font-semibold text-brand' : 'text-gray-500'}`}>
+                {s === 1 ? 'Delivery' : s === 2 ? 'Review' : 'Payment'}
+              </span>
             </div>
-            {s < 3 && (
-              <div className={`flex-1 h-1 mx-2 ${s < step ? 'bg-green-500' : 'bg-gray-200'}`} />
+            {i < 2 && (
+              <div className={`flex-1 h-1 mx-2 mb-4 ${s < step ? 'bg-green-500' : 'bg-gray-200'}`} />
             )}
           </div>
         ))}
-      </div>
-
-      {/* Step Labels */}
-      <div className="flex justify-between text-xs text-gray-600 -mt-2">
-        <span className={step === 1 ? 'font-semibold text-brand' : ''}>Delivery</span>
-        <span className={step === 2 ? 'font-semibold text-brand' : ''}>Review</span>
-        <span className={step === 3 ? 'font-semibold text-brand' : ''}>Payment</span>
       </div>
 
       {error && (
@@ -319,6 +330,21 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
         {step === 1 && (
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Delivery Address</h3>
+
+            {/* Recipient Info */}
+            <div className="p-3 border rounded-lg bg-gray-50 space-y-1">
+              <h4 className="text-sm font-medium text-gray-700">Recipient</h4>
+              {defaultProfile?.firstName || defaultProfile?.lastName ? (
+                <p className="text-sm">{[defaultProfile.firstName, defaultProfile.lastName].filter(Boolean).join(' ')}</p>
+              ) : (
+                <p className="text-sm text-amber-600">Name not set in your profile</p>
+              )}
+              {defaultProfile?.phone ? (
+                <p className="text-sm text-gray-600">{defaultProfile.phone}</p>
+              ) : (
+                <p className="text-sm text-amber-600">Phone number not set in your profile</p>
+              )}
+            </div>
             
             <RadioGroup value={useDefaultAddress ? 'default' : 'custom'} onValueChange={(val: string) => setUseDefaultAddress(val === 'default')}>
               <div className="space-y-3">
@@ -453,7 +479,15 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
             </div>
 
             <div className="border rounded-lg p-4">
-              <h4 className="font-medium text-sm text-gray-700 mb-2">Delivery Address</h4>
+              <h4 className="font-medium text-sm text-gray-700 mb-2">Delivery Details</h4>
+              {(defaultProfile?.firstName || defaultProfile?.lastName) && (
+                <p className="text-sm font-medium">
+                  {[defaultProfile.firstName, defaultProfile.lastName].filter(Boolean).join(' ')}
+                </p>
+              )}
+              {defaultProfile?.phone && (
+                <p className="text-sm text-gray-600 mb-1">{defaultProfile.phone}</p>
+              )}
               <p className="text-sm">
                 {useDefaultAddress ? (
                   <>
