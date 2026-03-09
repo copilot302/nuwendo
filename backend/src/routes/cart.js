@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { flexibleAuthMiddleware } from '../middleware/auth.js';
+import { uploadBase64Image } from '../services/storageService.js';
 
 const router = express.Router();
 
@@ -249,6 +250,21 @@ router.post('/checkout', flexibleAuthMiddleware, async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to process checkout' });
   } finally {
     client.release();
+  }
+});
+
+// Upload receipt to Supabase Storage (same as booking receipts)
+router.post('/upload-receipt', flexibleAuthMiddleware, async (req, res) => {
+  try {
+    const { receiptData } = req.body;
+    if (!receiptData) {
+      return res.status(400).json({ success: false, message: 'Receipt data is required' });
+    }
+    const { url } = await uploadBase64Image(receiptData, `receipts/shop-order`);
+    res.json({ success: true, url });
+  } catch (error) {
+    console.error('Error uploading shop receipt:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload receipt' });
   }
 });
 

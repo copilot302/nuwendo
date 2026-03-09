@@ -206,21 +206,22 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
     reader.readAsDataURL(file)
   }
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData()
-    formData.append('file', file)
-    
-    const authToken = sessionStorage.getItem('authToken')
-    const response = await fetch(`${API_URL}/upload`, {
+  const uploadReceiptToStorage = async (base64Data: string): Promise<string> => {
+    const authToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken')
+    const email = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail')
+    const url = email
+      ? `${API_URL}/cart/upload-receipt?email=${encodeURIComponent(email)}`
+      : `${API_URL}/cart/upload-receipt`
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authToken}`
+        'Content-Type': 'application/json',
+        ...(authToken && { Authorization: `Bearer ${authToken}` })
       },
-      body: formData
+      body: JSON.stringify({ receiptData: base64Data })
     })
-    
     const data = await response.json()
-    if (!data.success) throw new Error(data.message || 'Upload failed')
+    if (!data.success) throw new Error(data.message || 'Receipt upload failed')
     return data.url
   }
 
@@ -242,14 +243,13 @@ export default function CheckoutFlow({ cart, onBack, onSuccess }: CheckoutFlowPr
         }
       }
 
-      if (!receiptFile) {
+      if (!receiptFile || !receiptPreview) {
         setError('Please upload your payment receipt')
         return
       }
 
-      // Upload receipt image
-      let receiptUrl = ''
-      receiptUrl = await uploadImage(receiptFile)
+      // Upload receipt to Supabase Storage via backend
+      const receiptUrl = await uploadReceiptToStorage(receiptPreview)
 
       // Submit order
       const checkoutData = {
