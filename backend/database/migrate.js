@@ -13,7 +13,12 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 // Database configuration
 // Use DATABASE_URL if available, otherwise use individual vars (local)
 const config = process.env.DATABASE_URL 
-  ? { connectionString: process.env.DATABASE_URL, ssl: false }
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: (process.env.DATABASE_URL.includes('sslmode=require') || process.env.NODE_ENV === 'production')
+        ? { rejectUnauthorized: false }
+        : false
+    }
   : {
       user: process.env.DB_USER || 'postgres',
       host: process.env.DB_HOST || 'localhost',
