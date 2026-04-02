@@ -5,27 +5,40 @@ dotenv.config();
 
 const { Pool } = pg;
 
+const normalizeDatabaseUrl = (rawValue) => {
+  if (!rawValue) return null;
+  // Handle accidental wrapping quotes/spaces from hosting panel copy-paste
+  return String(rawValue).trim().replace(/^['\"]|['\"]$/g, '');
+};
+
+const normalizedDatabaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL);
+
 console.log('Database Configuration:');
-console.log('- DATABASE_URL present:', !!process.env.DATABASE_URL);
-if (process.env.DATABASE_URL) {
-  // Log only the protocol and host, not the full URL with credentials
-  const url = new URL(process.env.DATABASE_URL);
-  console.log('- Database Host:', url.hostname);
-  console.log('- Database Port:', url.port);
-  console.log('- Database Name:', url.pathname.substring(1));
+console.log('- DATABASE_URL present:', !!normalizedDatabaseUrl);
+if (normalizedDatabaseUrl) {
+  try {
+    // Log only the protocol and host, not the full URL with credentials
+    const url = new URL(normalizedDatabaseUrl);
+    console.log('- Database Host:', url.hostname);
+    console.log('- Database Port:', url.port);
+    console.log('- Database Name:', url.pathname.substring(1));
+  } catch (error) {
+    console.warn('- DATABASE_URL appears malformed. Will still attempt DB connection with provided value.');
+    console.warn('- Parse warning:', error.message);
+  }
 }
 
 // Support both DATABASE_URL and individual connection params
 const shouldUseSsl = process.env.DB_SSL === 'false'
   ? false
   : (
-      (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) ||
+      (normalizedDatabaseUrl && normalizedDatabaseUrl.includes('sslmode=require')) ||
       process.env.NODE_ENV === 'production'
     );
 
-const pool = process.env.DATABASE_URL 
+const pool = normalizedDatabaseUrl
   ? new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: normalizedDatabaseUrl,
       ssl: shouldUseSsl ? { rejectUnauthorized: false } : false,
       connectionTimeoutMillis: 5000,
       idleTimeoutMillis: 30000

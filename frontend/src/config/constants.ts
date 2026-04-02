@@ -1,6 +1,13 @@
 // API Configuration
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-export const APP_URL = import.meta.env.VITE_APP_URL || 'http://localhost:5173';
+const isLocalhost =
+  typeof window !== 'undefined' &&
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+const defaultApiUrl = isLocalhost ? 'http://localhost:5000' : 'https://api.nuwendo.com';
+const defaultAppUrl = isLocalhost ? 'http://localhost:5173' : 'https://app.nuwendo.com';
+
+export const API_URL = import.meta.env.VITE_API_URL || defaultApiUrl;
+export const APP_URL = import.meta.env.VITE_APP_URL || defaultAppUrl;
 
 // API Endpoints
 export const API_ENDPOINTS = {

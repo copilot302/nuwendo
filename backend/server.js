@@ -20,6 +20,7 @@ import uploadRoutes from './src/routes/upload.js';
 import pool from './src/config/database.js';
 import { spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -28,6 +29,8 @@ const __dirname = path.dirname(__filename);
 // Check and run migrations if needed
 const checkAndMigrate = async () => {
   try {
+    const shouldAutoMigrate = process.env.AUTO_MIGRATE === 'true';
+
     // Check if admin_users table exists
     const result = await pool.query(`
       SELECT EXISTS (
@@ -39,12 +42,28 @@ const checkAndMigrate = async () => {
     
     if (!result.rows[0].exists) {
       console.log('\n⚠️  Database tables not found. Running migrations...\n');
+
+      if (!shouldAutoMigrate) {
+        console.warn('⚠️  AUTO_MIGRATE is disabled. Skipping migrations at startup.');
+        return;
+      }
+
+      const migrationCwd = './database';
+      if (!fs.existsSync(migrationCwd)) {
+        console.warn(`⚠️  Migration directory not found (${migrationCwd}). Skipping startup migrations.`);
+        return;
+      }
       
       return new Promise((resolve) => {
         const proc = spawn('npm', ['run', 'migrate'], {
-          cwd: './database',
+          cwd: migrationCwd,
           stdio: 'inherit',
           shell: true
+        });
+
+        proc.on('error', (err) => {
+          console.error('❌ Failed to start migration process:', err.message);
+          resolve();
         });
         
         proc.on('close', (code) => {
@@ -63,9 +82,6 @@ const checkAndMigrate = async () => {
     console.error('Migration check error:', error.message);
   }
 };
-
-// Run migration check before starting server
-await checkAndMigrate();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -212,4 +228,9 @@ app.listen(PORT, HOST, () => {
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`✓ CORS Origin: ${process.env.CORS_ORIGIN || 'https://app.nuwendo.com'}`);
   console.log(`✓ Server ready to accept connections`);
+
+  // Run migration check in background so startup is never blocked
+  checkAndMigrate().catch((error) => {
+    console.error('Background migration check failed:', error?.message || error);
+  });
 });
