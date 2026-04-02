@@ -71,16 +71,27 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS Configuration
-const allowedOrigins = process.env.CORS_ORIGIN 
+const defaultAllowedOrigins = [
+  'https://frontend-liart-six-87.vercel.app',
+  'https://www.nuwendo.dev',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
+
+const envAllowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['https://frontend-liart-six-87.vercel.app'];
+  : [];
+
+const allowedOrigins = Array.from(new Set([...defaultAllowedOrigins, ...envAllowedOrigins]));
+
+const isLocalDevOrigin = (origin) => /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    if (allowedOrigins.indexOf(origin) !== -1 || isLocalDevOrigin(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
