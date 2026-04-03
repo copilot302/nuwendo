@@ -25,10 +25,138 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const runEssentialSeeds = async () => {
+  console.log('🌱 Running essential seed checks...');
+
+  // Seed services when empty
+  const servicesTable = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'services'
+    ) AS exists
+  `);
+
+  if (servicesTable.rows[0].exists) {
+    const servicesCount = await pool.query('SELECT COUNT(*)::int AS count FROM services');
+    if (servicesCount.rows[0].count === 0) {
+      await pool.query(`
+        INSERT INTO services (name, description, duration_minutes, price, category, is_active)
+        VALUES
+          ('Nuwendo Starter', 'Comprehensive Consultation + Laboratory Test Request + Nutrition Plan + Follow-up', 60, 3700.00, 'Services', true),
+          ('Comprehensive Consultation', 'Complete health consultation with our metabolic specialist', 60, 2000.00, 'Services', true),
+          ('Nutrition Plan', 'Personalized nutrition plan tailored to your metabolic needs', 60, 1500.00, 'Services', true),
+          ('Follow-up', 'Follow-up consultation to track your progress', 30, 800.00, 'Services', true),
+          ('Medical Certificate', 'Official medical certificate for various purposes', 15, 500.00, 'Services', true)
+      `);
+      console.log('✅ Seeded services');
+    } else {
+      console.log(`ℹ️ Services already present (${servicesCount.rows[0].count})`);
+    }
+  }
+
+  // Seed working hours when empty
+  const workingHoursTable = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'working_hours'
+    ) AS exists
+  `);
+
+  if (workingHoursTable.rows[0].exists) {
+    const workingHoursCount = await pool.query('SELECT COUNT(*)::int AS count FROM working_hours');
+    if (workingHoursCount.rows[0].count === 0) {
+      await pool.query(`
+        INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, is_active)
+        VALUES
+          (0, '07:30:00', '17:30:00', 'online', true),
+          (1, '07:30:00', '17:30:00', 'online', true),
+          (2, '07:30:00', '17:30:00', 'online', true),
+          (3, '09:00:00', '17:00:00', 'on-site', true),
+          (4, '09:00:00', '17:00:00', 'on-site', true),
+          (5, '09:00:00', '17:00:00', 'on-site', true),
+          (6, '07:30:00', '17:30:00', 'online', true)
+      `);
+      console.log('✅ Seeded working hours');
+    } else {
+      console.log(`ℹ️ Working hours already present (${workingHoursCount.rows[0].count})`);
+    }
+  }
+
+  // Seed availability windows when empty (new scheduling source)
+  const availabilityWindowsTable = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'availability_windows'
+    ) AS exists
+  `);
+
+  if (availabilityWindowsTable.rows[0].exists) {
+    const availabilityCount = await pool.query('SELECT COUNT(*)::int AS count FROM availability_windows');
+    if (availabilityCount.rows[0].count === 0) {
+      await pool.query(`
+        INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
+        VALUES
+          (0, '07:30:00', '17:30:00', 'online', true, 1, 1),
+          (1, '07:30:00', '17:30:00', 'online', true, 1, 1),
+          (2, '07:30:00', '17:30:00', 'online', true, 1, 1),
+          (3, '09:00:00', '17:00:00', 'on-site', true, 1, 1),
+          (4, '09:00:00', '17:00:00', 'on-site', true, 1, 1),
+          (5, '09:00:00', '17:00:00', 'on-site', true, 1, 1),
+          (6, '07:30:00', '17:30:00', 'online', true, 1, 1)
+      `);
+      console.log('✅ Seeded availability windows');
+    } else {
+      console.log(`ℹ️ Availability windows already present (${availabilityCount.rows[0].count})`);
+    }
+  }
+
+  // Seed basic shop catalog when empty
+  const shopItemsTable = await pool.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'shop_items'
+    ) AS exists
+  `);
+
+  if (shopItemsTable.rows[0].exists) {
+    const shopItemsCount = await pool.query('SELECT COUNT(*)::int AS count FROM shop_items');
+    if (shopItemsCount.rows[0].count === 0) {
+      await pool.query(`
+        INSERT INTO shop_items (name, description, category, price, stock_quantity, is_active)
+        VALUES
+          ('Tirzepatide', 'GIP/GLP-1 receptor agonist for metabolic health and weight management.', 'Peptides', 0.00, 0, true),
+          ('Semaglutide', 'GLP-1 receptor agonist for blood sugar control and weight management.', 'Peptides', 0.00, 0, true)
+      `);
+
+      await pool.query(`
+        INSERT INTO shop_item_variants (shop_item_id, name, price, is_active, sort_order)
+        SELECT id, '50mg', 15000.00, true, 1 FROM shop_items WHERE name = 'Tirzepatide'
+        UNION ALL
+        SELECT id, '30mg', 9000.00, true, 2 FROM shop_items WHERE name = 'Tirzepatide'
+        UNION ALL
+        SELECT id, 'Per Shot', 2500.00, true, 3 FROM shop_items WHERE name = 'Tirzepatide'
+        UNION ALL
+        SELECT id, '8mg', 9000.00, true, 1 FROM shop_items WHERE name = 'Semaglutide'
+        UNION ALL
+        SELECT id, '16mg', 16000.00, true, 2 FROM shop_items WHERE name = 'Semaglutide'
+        UNION ALL
+        SELECT id, 'Per Shot', 2000.00, true, 3 FROM shop_items WHERE name = 'Semaglutide'
+      `);
+
+      console.log('✅ Seeded shop catalog');
+    } else {
+      console.log(`ℹ️ Shop items already present (${shopItemsCount.rows[0].count})`);
+    }
+  }
+
+  console.log('✅ Essential seed checks complete');
+};
+
 // Check and run migrations if needed
 const checkAndMigrate = async () => {
   try {
     const shouldAutoMigrate = process.env.AUTO_MIGRATE === 'true';
+    let tablesReady = false;
 
     // Check if admin_users table exists
     const result = await pool.query(`
@@ -49,6 +177,7 @@ const checkAndMigrate = async () => {
 
       try {
         await runMigrations();
+        tablesReady = true;
         console.log('\n✅ Migrations completed successfully\n');
       } catch (migrationError) {
         console.error('\n❌ Migrations failed. Continuing anyway...\n');
@@ -56,6 +185,11 @@ const checkAndMigrate = async () => {
       }
     } else {
       console.log('✓ Database tables exist');
+      tablesReady = true;
+    }
+
+    if (tablesReady) {
+      await runEssentialSeeds();
     }
   } catch (error) {
     console.error('Migration check error:', error.message);
