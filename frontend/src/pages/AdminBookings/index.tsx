@@ -19,6 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Calendar,
   Clock,
   Search,
@@ -33,6 +39,7 @@ import {
   AlertCircle,
   RefreshCw,
   CalendarClock,
+  MoreHorizontal,
 } from 'lucide-react';
 import { API_URL } from '@/config/api';
 
@@ -550,112 +557,180 @@ export default function AdminBookings() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredBookings.map((booking) => (
-              <Card
-                key={booking.id}
-                className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4"
-                style={{
-                  borderLeftColor:
-                    booking.business_status === 'completed'
-                      ? '#22c55e'  // Green
-                      : booking.business_status === 'no_show'
-                      ? '#f97316'  // Orange
-                      : booking.business_status === 'cancelled'
-                      ? '#ef4444'  // Red
-                      : '#3b82f6',  // Blue (scheduled)
-                }}
-                onClick={() => handleBookingClick(booking)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 line-clamp-1">
-                        {booking.service_name}
-                      </h3>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {booking.patient_name}
-                      </p>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <Badge
-                        className={`${businessStatusColors[booking.business_status]} text-xs`}
-                      >
-                        {booking.business_status}
-                      </Badge>
-                      {booking.time_status && (
-                        <Badge
-                          className={`${timeStatusColors[booking.time_status]} text-xs`}
-                        >
-                          {booking.time_status.replace('_', ' ')}
-                        </Badge>
-                      )}
-                      {(booking.reschedule_count ?? 0) > 0 && (
-                        <Badge className="bg-orange-100 text-orange-700 text-xs">
-                          ↻ Rescheduled ({booking.reschedule_count}x)
-                        </Badge>
-                      )}
-                    </div>
+          <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+            <div className="hidden xl:grid xl:grid-cols-12 gap-4 px-4 py-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-200">
+              <div className="col-span-2">Patient</div>
+              <div className="col-span-2">Service</div>
+              <div className="col-span-2">Date / Time</div>
+              <div className="col-span-1">Type</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-3 text-right">Actions</div>
+            </div>
+
+            {filteredBookings.map((booking) => {
+              const canStatusUpdate =
+                booking.business_status !== 'completed' &&
+                booking.business_status !== 'cancelled' &&
+                hasAppointmentEnded(booking.slot_date, booking.slot_time, booking.duration_minutes);
+
+              const canReschedule =
+                (booking.status === 'pending' || booking.status === 'confirmed') &&
+                booking.business_status !== 'cancelled' &&
+                booking.business_status !== 'completed';
+
+              return (
+                <div
+                  key={booking.id}
+                  className="xl:grid xl:grid-cols-12 xl:items-center gap-4 px-4 py-3 border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60 transition-colors"
+                >
+                  <div className="xl:col-span-2 min-w-0">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Patient</p>
+                    <p className="font-semibold text-gray-900 truncate leading-tight">{booking.patient_name}</p>
+                    <p className="text-xs text-gray-500 truncate mt-1">{booking.patient_email}</p>
                   </div>
 
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <div className="flex-1">
-                        <span>{formatDate(booking.slot_date)}</span>
-                        {(booking.reschedule_count ?? 0) > 0 && booking.original_booking_date && (
-                          <div className="text-xs text-orange-600 mt-0.5">
-                            Originally: {formatDate(booking.original_booking_date)} at {formatTime(booking.original_booking_time || '')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
-                      <span>{formatTime(booking.slot_time)} - {formatTime(calculateEndTime(booking.slot_time, booking.duration_minutes || 30))}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span className="text-xs truncate">{booking.patient_email}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
+                  <div className="xl:col-span-2 min-w-0 mt-3 xl:mt-0">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Service</p>
+                    <p className="text-sm text-gray-800 truncate leading-tight">{booking.service_name}</p>
+                  </div>
+
+                  <div className="xl:col-span-2 mt-3 xl:mt-0">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Date / Time</p>
+                    <p className="text-sm text-gray-800">{formatDate(booking.slot_date)}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatTime(booking.slot_time)} - {formatTime(calculateEndTime(booking.slot_time, booking.duration_minutes || 30))}
+                    </p>
+                    {(booking.reschedule_count ?? 0) > 0 && booking.original_booking_date && (
+                      <p className="text-xs text-orange-600 mt-1">
+                        ↻ Originally {formatDate(booking.original_booking_date)} {booking.original_booking_time ? `at ${formatTime(booking.original_booking_time)}` : ''}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="xl:col-span-1 mt-3 xl:mt-0">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Type</p>
+                    <div className="flex items-center gap-1.5 text-sm">
                       {booking.appointment_type === 'online' ? (
                         <>
-                          <Video className="h-4 w-4 text-blue-500" />
-                          <span className="text-blue-600">Online Consultation</span>
+                          <Video className="h-4 w-4 text-blue-500 shrink-0" />
+                          <span className="text-blue-700">Online</span>
                         </>
                       ) : (
                         <>
-                          <MapPin className="h-4 w-4 text-green-500" />
-                          <span className="text-green-600">In-Person Visit</span>
+                          <MapPin className="h-4 w-4 text-green-500 shrink-0" />
+                          <span className="text-green-700">In-Person</span>
                         </>
                       )}
                     </div>
                     {booking.appointment_type === 'online' && booking.video_call_link && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <a
-                          href={booking.video_call_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-xs font-medium"
-                        >
-                          <Video className="h-4 w-4" />
-                          <span>Join Google Meet</span>
-                          <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </div>
+                      <a
+                        href={booking.video_call_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 mt-1"
+                      >
+                        Join Meet <ExternalLink className="h-3 w-3" />
+                      </a>
                     )}
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-400">
-                      Booked on {formatDate(booking.created_at)}
-                    </p>
+                  <div className="xl:col-span-2 mt-3 xl:mt-0">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Status</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Badge className={`${businessStatusColors[booking.business_status]} text-xs`}>
+                        {booking.business_status}
+                      </Badge>
+                      {booking.time_status && (
+                        <Badge className={`${timeStatusColors[booking.time_status]} text-xs`}>
+                          {booking.time_status.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-2">Booked: {formatDate(booking.created_at)}</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+
+                  <div className="xl:col-span-3 mt-3 xl:mt-0 xl:justify-self-end">
+                    <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Actions</p>
+                    <div className="flex items-center xl:justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8"
+                        onClick={() => handleBookingClick(booking)}
+                      >
+                        View
+                      </Button>
+
+                      {canReschedule && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 border-blue-300 text-blue-700 hover:bg-blue-50"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setRescheduleForm({ new_date: '', new_time: '', reason: '' });
+                            setRescheduleError(null);
+                            setAvailableSlots([]);
+                            setShowRescheduleDialog(true);
+                          }}
+                        >
+                          Reschedule
+                        </Button>
+                      )}
+
+                      {(booking.business_status !== 'cancelled' && booking.business_status !== 'completed') || canStatusUpdate ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" variant="outline" className="h-8 px-2.5">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            {booking.business_status !== 'cancelled' && booking.business_status !== 'completed' && (
+                              <DropdownMenuItem
+                                className="text-red-700 focus:text-red-700"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setBusinessStatusForm({ business_status: 'cancelled', admin_notes: '' });
+                                  setShowBusinessStatusDialog(true);
+                                }}
+                              >
+                                Cancel Appointment
+                              </DropdownMenuItem>
+                            )}
+
+                            {canStatusUpdate && (
+                              <>
+                                <DropdownMenuItem
+                                  className="text-green-700 focus:text-green-700"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setBusinessStatusForm({ business_status: 'completed', admin_notes: '' });
+                                    setShowBusinessStatusDialog(true);
+                                  }}
+                                >
+                                  Mark as Complete
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-orange-700 focus:text-orange-700"
+                                  onClick={() => {
+                                    setSelectedBooking(booking);
+                                    setBusinessStatusForm({ business_status: 'no_show', admin_notes: '' });
+                                    setShowBusinessStatusDialog(true);
+                                  }}
+                                >
+                                  Mark as No Show
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
