@@ -5,6 +5,16 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
+const getEmailFrom = () => {
+  // Prefer explicit env configuration
+  if (process.env.EMAIL_FROM) {
+    return process.env.EMAIL_FROM;
+  }
+
+  // Production-safe fallback for Nuwendo
+  return 'noreply@nuwendo.com';
+};
+
 // Generate 6-digit verification code
 export const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -21,7 +31,7 @@ export const sendVerificationEmail = async (email, code) => {
     console.log('📧 Sending verification email via Resend to:', email);
     
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+      from: getEmailFrom(),
       to: email,
       subject: 'Verify Your Nuwendo Account',
       html: `
@@ -88,7 +98,7 @@ export const sendPasswordResetEmail = async (email, resetLink) => {
 
   try {
     const { data, error } = await resend.emails.send({
-      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+      from: getEmailFrom(),
       to: email,
       subject: 'Reset Your Nuwendo Password',
       html: `
