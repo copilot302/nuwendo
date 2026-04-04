@@ -18,8 +18,11 @@ export default function Payment() {
   
   const signupEmail = sessionStorage.getItem('signupEmail') || ''
   const verificationCode = sessionStorage.getItem('verificationCode') || ''
-  const patientEmail = sessionStorage.getItem('patientEmail') || ''
-  const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true'
+  const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail') || ''
+  const isAuthenticated =
+    sessionStorage.getItem('isAuthenticated') === 'true' ||
+    localStorage.getItem('isAuthenticated') === 'true' ||
+    !!localStorage.getItem('authToken')
   const isValidUser = (signupEmail && verificationCode) || (patientEmail && isAuthenticated)
   
   const email = patientEmail || signupEmail

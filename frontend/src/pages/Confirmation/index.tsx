@@ -9,7 +9,7 @@ export default function Confirmation() {
   
   // Support both signup flow and logged-in patient flow
   const signupEmail = sessionStorage.getItem('signupEmail') || ''
-  const patientEmail = sessionStorage.getItem('patientEmail') || ''
+  const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail') || ''
   const email = patientEmail || signupEmail
   const isValidUser = email !== ''
   
@@ -44,7 +44,10 @@ export default function Confirmation() {
   }
 
   const handleDone = () => {
-    const isLoggedIn = sessionStorage.getItem('isAuthenticated') === 'true'
+    const isLoggedIn =
+      sessionStorage.getItem('isAuthenticated') === 'true' ||
+      localStorage.getItem('isAuthenticated') === 'true' ||
+      !!localStorage.getItem('authToken')
     
     // Clear booking-related data
     sessionStorage.removeItem('selectedService')
@@ -59,7 +62,9 @@ export default function Confirmation() {
     // Set them as authenticated so they can access their dashboard
     if (signupEmail && !isLoggedIn) {
       sessionStorage.setItem('isAuthenticated', 'true')
+      localStorage.setItem('isAuthenticated', 'true')
       sessionStorage.setItem('patientEmail', signupEmail)
+      localStorage.setItem('patientEmail', signupEmail)
       sessionStorage.removeItem('signupEmail')
       // ensure authToken is in localStorage as well (was stored in sessionStorage during VerifyCode)
       const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken')

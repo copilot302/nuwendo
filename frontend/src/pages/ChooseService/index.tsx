@@ -43,8 +43,11 @@ export default function ChooseService() {
   // Support both signup flow and logged-in patient flow
   const signupEmail = sessionStorage.getItem('signupEmail') || ''
   const verificationCode = sessionStorage.getItem('verificationCode') || ''
-  const patientEmail = sessionStorage.getItem('patientEmail') || ''
-  const isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true'
+  const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail') || ''
+  const isAuthenticated =
+    sessionStorage.getItem('isAuthenticated') === 'true' ||
+    localStorage.getItem('isAuthenticated') === 'true' ||
+    !!localStorage.getItem('authToken')
   
   // User is valid if they're either going through signup OR already logged in
   const isValidUser = (signupEmail && verificationCode) || (patientEmail && isAuthenticated)

@@ -120,12 +120,12 @@ export const updatePatientProfile = async (req, res) => {
           [userId, phone || '', address || '', region || '', province || '', city || '', barangay || '', street_address || '', medicalConditionsData]
         );
       } catch (insertErr) {
-        if (insertErr.message && insertErr.message.includes('column') && insertErr.message.includes('region')) {
-          // region column doesn't exist yet -- fall back to INSERT without it
+        if (insertErr.message && insertErr.message.includes('column')) {
+          // Older schema detected -- fall back to core profile columns only
           await pool.query(
-            `INSERT INTO patient_profiles (user_id, phone_number, address, province, city, barangay, street_address, medical_conditions)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [userId, phone || '', address || '', province || '', city || '', barangay || '', street_address || '', medicalConditionsData]
+            `INSERT INTO patient_profiles (user_id, phone_number, address, medical_conditions)
+             VALUES ($1, $2, $3, $4)`,
+            [userId, phone || '', address || '', medicalConditionsData]
           );
         } else {
           throw insertErr;
@@ -149,20 +149,16 @@ export const updatePatientProfile = async (req, res) => {
           [phone, address, region, province, city, barangay, street_address, medicalConditionsData, userId]
         );
       } catch (updateErr) {
-        if (updateErr.message && updateErr.message.includes('column') && updateErr.message.includes('region')) {
-          // region column doesn't exist yet -- fall back to UPDATE without it
+        if (updateErr.message && updateErr.message.includes('column')) {
+          // Older schema detected -- fall back to core profile columns only
           await pool.query(
             `UPDATE patient_profiles 
              SET phone_number = COALESCE($1, phone_number),
                  address = COALESCE($2, address),
-                 province = COALESCE($3, province),
-                 city = COALESCE($4, city),
-                 barangay = COALESCE($5, barangay),
-                 street_address = COALESCE($6, street_address),
-                 medical_conditions = COALESCE($7, medical_conditions),
+                 medical_conditions = COALESCE($3, medical_conditions),
                  updated_at = NOW()
-             WHERE user_id = $8`,
-            [phone, address, province, city, barangay, street_address, medicalConditionsData, userId]
+             WHERE user_id = $4`,
+            [phone, address, medicalConditionsData, userId]
           );
         } else {
           throw updateErr;
@@ -189,42 +185,23 @@ export const getFullPatientProfile = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    // Get user with profile — try with region column first, fall back without it
-    let userResult;
-    try {
-      userResult = await pool.query(
-        `SELECT u.id, u.email, u.first_name, u.last_name,
-                pp.phone_number, pp.address, pp.medical_conditions,
-                COALESCE(pp.province, '') as province,
-                COALESCE(pp.city, '') as city,
-                COALESCE(pp.barangay, '') as barangay,
-                COALESCE(pp.street_address, '') as street_address,
-                COALESCE(pp.region, '') as region
-         FROM users u
-         LEFT JOIN patient_profiles pp ON u.id = pp.user_id
-         WHERE u.email = $1`,
-        [email]
-      );
-    } catch (queryErr) {
-      if (queryErr.message && queryErr.message.includes('region')) {
-        // region column doesn't exist yet — retry without it
-        userResult = await pool.query(
-          `SELECT u.id, u.email, u.first_name, u.last_name,
-                  pp.phone_number, pp.address, pp.medical_conditions,
-                  COALESCE(pp.province, '') as province,
-                  COALESCE(pp.city, '') as city,
-                  COALESCE(pp.barangay, '') as barangay,
-                  COALESCE(pp.street_address, '') as street_address,
-                  '' as region
-           FROM users u
-           LEFT JOIN patient_profiles pp ON u.id = pp.user_id
-           WHERE u.email = $1`,
-          [email]
-        );
-      } else {
-        throw queryErr;
-      }
-    }
+    // Get user with profile in a schema-safe way.
+    // Optional columns may not exist in older local DBs, so read them via to_jsonb(pp)->>key.
+    const userResult = await pool.query(
+      `SELECT u.id, u.email, u.first_name, u.last_name,
+              pp.phone_number,
+              pp.address,
+              pp.medical_conditions,
+              COALESCE(to_jsonb(pp)->>'province', '') as province,
+              COALESCE(to_jsonb(pp)->>'city', '') as city,
+              COALESCE(to_jsonb(pp)->>'barangay', '') as barangay,
+              COALESCE(to_jsonb(pp)->>'street_address', '') as street_address,
+              COALESCE(to_jsonb(pp)->>'region', '') as region
+       FROM users u
+       LEFT JOIN patient_profiles pp ON u.id = pp.user_id
+       WHERE u.email = $1`,
+      [email]
+    );
 
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });

@@ -137,7 +137,11 @@ export default function PatientDashboard() {
   const [markingReceived, setMarkingReceived] = useState<number | null>(null)
 
   useEffect(() => {
-    const patientEmail = sessionStorage.getItem('patientEmail')
+    const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail')
+
+    if (patientEmail && !sessionStorage.getItem('patientEmail')) {
+      sessionStorage.setItem('patientEmail', patientEmail)
+    }
     
     if (!patientEmail) {
       navigate('/login')
@@ -196,7 +200,7 @@ export default function PatientDashboard() {
   const checkShopAccess = async () => {
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken')
-      const email = sessionStorage.getItem('patientEmail')
+      const email = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail')
       
       // If no token, use email-based endpoint (for legacy sessions)
       if (!token && email) {
@@ -434,44 +438,61 @@ export default function PatientDashboard() {
   }
 
   const startEditingAddress = async () => {
-    // Pre-populate address fields from profile
-    if (profile?.region) setSelectedRegionCode(profile.region)
-    if (profile?.province) setSelectedProvinceCode(profile.province)
-    if (profile?.city) setSelectedCityCode(profile.city)
-    if (profile?.barangay) setSelectedBarangayName(profile.barangay)
-    if (profile?.street_address) setStreetAddress(profile.street_address)
-    
+    const resolveCode = (
+      options: Array<{ code: string; name: string }>,
+      storedValue?: string
+    ) => {
+      if (!storedValue) return ''
+      const normalized = storedValue.trim().toLowerCase()
+
+      const byCode = options.find(
+        (opt) => opt.code.toLowerCase() === normalized
+      )
+      if (byCode) return byCode.code
+
+      const byName = options.find(
+        (opt) => opt.name.toLowerCase() === normalized
+      )
+      return byName?.code || ''
+    }
+
+    // Reset then pre-populate address fields from profile
+    setSelectedRegionCode('')
+    setSelectedProvinceCode('')
+    setSelectedCityCode('')
+    setSelectedBarangayName(profile?.barangay || '')
+    setStreetAddress(profile?.street_address || '')
+
     setEditForm(prev => ({
       ...prev,
       cityAddress: profile?.cityAddress || ''
     }))
     setIsEditingAddress(true)
     
-    // Load regions and any existing address data
-    await loadRegions()
-    if (profile?.region) {
-      const provincesData = await addressService.getProvinces(profile.region)
-      setProvinces(provincesData)
-      
-      if (profile?.province) {
-        const citiesData = await addressService.getCities(profile.province)
-        setCities(citiesData)
-        
-        if (profile?.city) {
-          const barangaysData = await addressService.getBarangays(profile.city)
-          setBarangays(barangaysData)
-        }
-      }
-    }
-  }
+    // Load cascading location options and resolve stored names/codes correctly.
+    const regionsData = await addressService.getRegions()
+    setRegions(regionsData)
 
-  const loadRegions = async () => {
-    try {
-      const regionsData = await addressService.getRegions()
-      setRegions(regionsData)
-    } catch (error) {
-      console.error('Failed to load regions:', error)
-    }
+    const resolvedRegionCode = resolveCode(regionsData, profile?.region)
+    if (!resolvedRegionCode) return
+
+    setSelectedRegionCode(resolvedRegionCode)
+    const provincesData = await addressService.getProvinces(resolvedRegionCode)
+    setProvinces(provincesData)
+
+    const resolvedProvinceCode = resolveCode(provincesData, profile?.province)
+    if (!resolvedProvinceCode) return
+
+    setSelectedProvinceCode(resolvedProvinceCode)
+    const citiesData = await addressService.getCities(resolvedProvinceCode)
+    setCities(citiesData)
+
+    const resolvedCityCode = resolveCode(citiesData, profile?.city)
+    if (!resolvedCityCode) return
+
+    setSelectedCityCode(resolvedCityCode)
+    const barangaysData = await addressService.getBarangays(resolvedCityCode)
+    setBarangays(barangaysData)
   }
 
   const handleRegionChange = async (regionCode: string) => {
@@ -526,6 +547,8 @@ export default function PatientDashboard() {
   const handleLogout = () => {
     sessionStorage.clear()
     localStorage.removeItem('authToken')
+    localStorage.removeItem('patientEmail')
+    localStorage.removeItem('isAuthenticated')
     navigate('/')
   }
 
@@ -568,7 +591,7 @@ export default function PatientDashboard() {
       
       if (response.ok && data.success) {
         // Refresh appointments
-        const patientEmail = sessionStorage.getItem('patientEmail')
+        const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail')
         if (patientEmail) {
           fetchDashboardData(patientEmail)
         }
@@ -657,7 +680,7 @@ export default function PatientDashboard() {
         setShowRescheduleDialog(false)
         setSelectedAppointment(null)
         // Refresh appointments
-        const patientEmail = sessionStorage.getItem('patientEmail')
+        const patientEmail = sessionStorage.getItem('patientEmail') || localStorage.getItem('patientEmail')
         if (patientEmail) {
           fetchDashboardData(patientEmail)
         }
@@ -1100,7 +1123,13 @@ export default function PatientDashboard() {
               <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
                 <p className="text-yellow-800 text-sm font-medium">Your session needs to be refreshed to use the shop.</p>
                 <button
-                  onClick={() => { sessionStorage.clear(); localStorage.removeItem('authToken'); navigate('/login') }}
+                  onClick={() => {
+                    sessionStorage.clear();
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('patientEmail');
+                    localStorage.removeItem('isAuthenticated');
+                    navigate('/login');
+                  }}
                   className="ml-4 px-4 py-1.5 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700"
                 >
                   Log in again
