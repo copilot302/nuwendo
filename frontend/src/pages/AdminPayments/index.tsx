@@ -21,6 +21,7 @@ import {
   QrCode,
   CreditCard,
   Eye,
+  Download,
   Calendar,
   Clock,
   Settings,
@@ -80,6 +81,11 @@ interface ShopOrder {
   }[]
 }
 
+interface ReceiptViewerState {
+  url: string
+  title: string
+}
+
 export function AdminPayments() {
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -96,17 +102,19 @@ export function AdminPayments() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [qrPreview, setQrPreview] = useState<string | null>(null)
-  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null)
+  const [receiptViewer, setReceiptViewer] = useState<ReceiptViewerState | null>(null)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [rejectingId, setRejectingId] = useState<number | null>(null)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last7days' | 'last30days'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [shopDateFilter, setShopDateFilter] = useState<'all' | 'today' | 'yesterday' | 'last7days' | 'last30days'>('all')
+  const [shopSearchQuery, setShopSearchQuery] = useState('')
   
   // Shop order payment states
   const [shopOrders, setShopOrders] = useState<ShopOrder[]>([])
   const [shopVerifyingId, setShopVerifyingId] = useState<number | null>(null)
-  const [shopReceiptUrl, setShopReceiptUrl] = useState<string | null>(null)
+  const [shopRejectingId, setShopRejectingId] = useState<number | null>(null)
   const [activePaymentTab, setActivePaymentTab] = useState<'bookings' | 'orders'>('bookings')
 
   useEffect(() => {
@@ -117,6 +125,25 @@ export function AdminPayments() {
     }
     fetchData()
   }, [navigate])
+
+  useEffect(() => {
+    if (!receiptViewer) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReceiptViewer(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [receiptViewer])
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -177,7 +204,7 @@ export function AdminPayments() {
     }
   }
 
-  const handleVerifyShopPayment = async (orderId: number, verified: boolean) => {
+  const handleApproveShopPayment = async (orderId: number) => {
     setShopVerifyingId(orderId)
     try {
       const token = localStorage.getItem('adminToken')
@@ -187,18 +214,44 @@ export function AdminPayments() {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ payment_verified: verified })
+        body: JSON.stringify({ payment_verified: true })
       })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.message || 'Failed to verify payment')
+      if (!response.ok) throw new Error(data.message || 'Failed to approve payment')
       
       setShopOrders(prev => prev.filter(o => o.id !== orderId))
-      setSuccess(verified ? 'Shop order payment verified!' : 'Payment verification removed')
+      setSuccess('Shop order payment approved!')
       setTimeout(() => setSuccess(''), 3000)
     } catch (err: any) {
-      setError(err.message || 'Failed to verify payment')
+      setError(err.message || 'Failed to approve payment')
     } finally {
       setShopVerifyingId(null)
+    }
+  }
+
+  const handleRejectShopPayment = async (orderId: number) => {
+    setShopRejectingId(orderId)
+    try {
+      const token = localStorage.getItem('adminToken')
+      const response = await fetch(`${API_URL}/admin/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'cancelled' })
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.message || 'Failed to reject payment')
+
+      setShopOrders(prev => prev.filter(o => o.id !== orderId))
+      setSuccess('Shop order payment rejected')
+      setTimeout(() => setSuccess(''), 3000)
+    } catch (err: any) {
+      setError(err.message || 'Failed to reject payment')
+    } finally {
+      setShopRejectingId(null)
     }
   }
 
@@ -355,9 +408,18 @@ export function AdminPayments() {
     }).format(typeof price === 'string' ? parseFloat(price) : price)
   }
 
+  const formatOrderReference = (id: number, createdAt: string) => {
+    const date = new Date(createdAt)
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    const paddedId = String(id).padStart(6, '0')
+    return `TXN-${y}${m}${d}-${paddedId}`
+  }
+
   // Helper function to check if a date matches the filter
-  const matchesDateFilter = (createdAt: string) => {
-    if (dateFilter === 'all') return true
+  const matchesDateFilter = (createdAt: string, filter: 'all' | 'today' | 'yesterday' | 'last7days' | 'last30days') => {
+    if (filter === 'all') return true
     if (!createdAt) return false
 
     const bookingDate = new Date(createdAt)
@@ -366,7 +428,7 @@ export function AdminPayments() {
     const yesterdayStart = new Date(todayStart)
     yesterdayStart.setDate(yesterdayStart.getDate() - 1)
 
-    switch (dateFilter) {
+  switch (filter) {
       case 'today':
         return bookingDate >= todayStart
       case 'yesterday':
@@ -387,13 +449,57 @@ export function AdminPayments() {
 
   // Filter pending bookings
   const filteredBookings = pendingBookings
-    .filter(b => matchesDateFilter(b.created_at))
+    .filter(b => matchesDateFilter(b.created_at, dateFilter))
     .filter(b => {
       if (!searchQuery.trim()) return true
       const query = searchQuery.toLowerCase()
       const fullName = `${b.first_name} ${b.last_name}`.toLowerCase()
       return fullName.includes(query) || b.email.toLowerCase().includes(query)
     })
+
+  const filteredShopOrders = shopOrders
+    .filter(order => matchesDateFilter(order.created_at, shopDateFilter))
+    .filter(order => {
+      if (!shopSearchQuery.trim()) return true
+      const query = shopSearchQuery.toLowerCase()
+      const fullName = `${order.first_name} ${order.last_name}`.toLowerCase()
+      const reference = formatOrderReference(order.id, order.created_at).toLowerCase()
+      return (
+        fullName.includes(query) ||
+        order.email.toLowerCase().includes(query) ||
+        reference.includes(query)
+      )
+    })
+
+  const openReceiptViewer = (url: string, title: string) => {
+    setReceiptViewer({ url, title })
+  }
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptViewer?.url) return
+
+    try {
+      const response = await fetch(receiptViewer.url)
+      if (!response.ok) throw new Error('Failed to fetch receipt')
+
+      const blob = await response.blob()
+      const extension = blob.type.split('/')[1] || 'jpg'
+      const safeTitle = receiptViewer.title.toLowerCase().replace(/\s+/g, '-')
+      const fileName = `${safeTitle}-${Date.now()}.${extension}`
+
+      const blobUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = blobUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.URL.revokeObjectURL(blobUrl)
+    } catch (downloadError) {
+      // Fallback: still let admin access the file if browser blocks download
+      window.open(receiptViewer.url, '_blank', 'noopener,noreferrer')
+    }
+  }
 
   if (isLoading) {
     return (
@@ -408,7 +514,6 @@ export function AdminPayments() {
   return (
     <AdminLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Payment Management</h1>
@@ -432,7 +537,6 @@ export function AdminPayments() {
           </div>
         )}
 
-        {/* Payment Type Tabs */}
         <div className="flex gap-2 mb-6">
           <Button
             variant={activePaymentTab === 'bookings' ? 'default' : 'outline'}
@@ -459,320 +563,421 @@ export function AdminPayments() {
         </div>
 
         {activePaymentTab === 'bookings' && (
-        <Card>
-          <CardHeader className="space-y-4">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              <CardTitle>Pending Payments</CardTitle>
-              {pendingBookings.length > 0 && (
-                <Badge className="bg-yellow-100 text-yellow-800">{pendingBookings.length}</Badge>
-              )}
-            </div>
-            
-            <CardDescription>
-              Review and approve payment receipts
-            </CardDescription>
-
-            {/* Search and Filter Row */}
-            <div className="flex flex-col lg:flex-row gap-3 pt-2">
-              {/* Search Input */}
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search by name or email..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-9"
-                />
+          <Card>
+            <CardHeader className="space-y-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                <CardTitle>Pending Payments</CardTitle>
+                {pendingBookings.length > 0 && (
+                  <Badge className="bg-yellow-100 text-yellow-800">{pendingBookings.length}</Badge>
+                )}
               </div>
 
-              {/* Date Filter Buttons */}
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  size="sm"
-                  variant={dateFilter === 'all' ? 'default' : 'outline'}
-                  onClick={() => setDateFilter('all')}
-                  className={dateFilter === 'all' ? 'bg-brand hover:bg-brand/90' : ''}
-                >
-                  All Time
-                </Button>
-                <Button
-                  size="sm"
-                  variant={dateFilter === 'today' ? 'default' : 'outline'}
-                  onClick={() => setDateFilter('today')}
-                  className={dateFilter === 'today' ? 'bg-brand hover:bg-brand/90' : ''}
-                >
-                  Today
-                </Button>
-                <Button
-                  size="sm"
-                  variant={dateFilter === 'yesterday' ? 'default' : 'outline'}
-                  onClick={() => setDateFilter('yesterday')}
-                  className={dateFilter === 'yesterday' ? 'bg-brand hover:bg-brand/90' : ''}
-                >
-                  Yesterday
-                </Button>
-                <Button
-                  size="sm"
-                  variant={dateFilter === 'last7days' ? 'default' : 'outline'}
-                  onClick={() => setDateFilter('last7days')}
-                  className={dateFilter === 'last7days' ? 'bg-brand hover:bg-brand/90' : ''}
-                >
-                  Last 7 Days
-                </Button>
-                <Button
-                  size="sm"
-                  variant={dateFilter === 'last30days' ? 'default' : 'outline'}
-                  onClick={() => setDateFilter('last30days')}
-                  className={dateFilter === 'last30days' ? 'bg-brand hover:bg-brand/90' : ''}
-                >
-                  Last 30 Days
-                </Button>
+              <CardDescription>Review and approve payment receipts</CardDescription>
+
+              <div className="flex flex-col lg:flex-row gap-3 pt-2">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 h-9"
+                  />
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant={dateFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setDateFilter('all')}
+                    className={dateFilter === 'all' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    All Time
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateFilter === 'today' ? 'default' : 'outline'}
+                    onClick={() => setDateFilter('today')}
+                    className={dateFilter === 'today' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateFilter === 'yesterday' ? 'default' : 'outline'}
+                    onClick={() => setDateFilter('yesterday')}
+                    className={dateFilter === 'yesterday' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Yesterday
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateFilter === 'last7days' ? 'default' : 'outline'}
+                    onClick={() => setDateFilter('last7days')}
+                    className={dateFilter === 'last7days' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Last 7 Days
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={dateFilter === 'last30days' ? 'default' : 'outline'}
+                    onClick={() => setDateFilter('last30days')}
+                    className={dateFilter === 'last30days' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Last 30 Days
+                  </Button>
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredBookings.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>
-                  {searchQuery.trim() 
-                    ? `No payments found matching "${searchQuery}"` 
-                    : dateFilter !== 'all'
-                    ? `No pending payments ${dateFilter === 'today' ? 'booked today' : dateFilter === 'yesterday' ? 'booked yesterday' : dateFilter === 'last7days' ? 'booked in the last 7 days' : 'booked in the last 30 days'}`
-                    : 'No pending payments'
-                  }
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {filteredBookings.map((booking) => (
-                  <div key={booking.id} className="border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{booking.service_name}</h4>
-                        <p className="text-sm text-gray-500">{booking.first_name} {booking.last_name}</p>
-                        <p className="text-xs text-gray-400">{booking.email}</p>
-                        {booking.created_at && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            Booked: {formatDateTime(booking.created_at)}
-                          </p>
-                        )}
-                      </div>
-                      <span className="font-bold text-brand">{formatPrice(booking.price)}</span>
-                    </div>
+            </CardHeader>
 
-                    <div className="flex items-center gap-4 text-sm text-gray-600 mb-3 flex-wrap">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {formatDate(booking.booking_date)}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {formatTime(booking.booking_time)}
-                      </span>
-                      <Badge variant="outline" className={
-                        booking.appointment_type === 'online' 
-                          ? 'border-blue-200 text-blue-700' 
-                          : 'border-purple-200 text-purple-700'
-                      }>
-                        {booking.appointment_type}
-                      </Badge>
-                    </div>
-
-                    {/* Receipt Preview */}
-                    {booking.payment_receipt_url && (
-                      <div className="mb-3">
-                        <button
-                          onClick={() => setViewingReceipt(booking.payment_receipt_url)}
-                          className="flex items-center gap-2 text-sm text-brand hover:underline"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Payment Receipt
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleApprovePayment(booking.id)}
-                        disabled={approvingId === booking.id || rejectingId === booking.id}
-                      >
-                        {approvingId === booking.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-1" />
-                            Approve
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 border-red-200 text-red-600 hover:bg-red-50"
-                        onClick={() => handleRejectPayment(booking.id)}
-                        disabled={approvingId === booking.id || rejectingId === booking.id}
-                      >
-                        {rejectingId === booking.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <X className="w-4 h-4 mr-1" />
-                            Reject
-                          </>
-                        )}
-                      </Button>
-                    </div>
+            <CardContent>
+              {filteredBookings.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <CreditCard className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>
+                    {searchQuery.trim()
+                      ? `No payments found matching "${searchQuery}"`
+                      : dateFilter !== 'all'
+                      ? `No pending payments ${dateFilter === 'today' ? 'booked today' : dateFilter === 'yesterday' ? 'booked yesterday' : dateFilter === 'last7days' ? 'booked in the last 7 days' : 'booked in the last 30 days'}`
+                      : 'No pending payments'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="hidden xl:grid xl:grid-cols-[1.2fr_1.2fr_1.1fr_0.9fr_0.9fr_220px] gap-4 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50">
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Patient</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Service</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Date / Time</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Type</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Receipt / Price</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500 text-right">Actions</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                  {filteredBookings.map((booking) => (
+                    <div key={booking.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:grid-cols-[1.2fr_1.2fr_1.1fr_0.9fr_0.9fr_220px] xl:items-center">
+                        <div>
+                          <p className="font-medium text-gray-900 truncate">{booking.first_name} {booking.last_name}</p>
+                          <p className="text-xs text-gray-500 truncate">{booking.email}</p>
+                        </div>
+
+                        <div>
+                          <p className="font-medium text-gray-900 truncate">{booking.service_name}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-700 flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {formatDate(booking.booking_date)}
+                          </p>
+                          <p className="text-sm text-gray-700 flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            {formatTime(booking.booking_time)}
+                          </p>
+                          {booking.created_at && (
+                            <p className="text-xs text-gray-400 mt-1">Booked: {formatDateTime(booking.created_at)}</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <Badge
+                            variant="outline"
+                            className={
+                              booking.appointment_type === 'online'
+                                ? 'border-blue-200 text-blue-700 capitalize'
+                                : 'border-purple-200 text-purple-700 capitalize'
+                            }
+                          >
+                            {booking.appointment_type}
+                          </Badge>
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-brand mb-1">{formatPrice(booking.price)}</p>
+                          {booking.payment_receipt_url ? (
+                            <button
+                              onClick={() => openReceiptViewer(booking.payment_receipt_url, 'Booking Payment Receipt')}
+                              className="inline-flex items-center gap-2 text-sm text-brand hover:underline"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Receipt
+                            </button>
+                          ) : (
+                            <p className="text-sm text-gray-400">No receipt</p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row xl:flex-col gap-2 xl:items-stretch xl:justify-self-end xl:w-full">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleApprovePayment(booking.id)}
+                            disabled={approvingId === booking.id || rejectingId === booking.id}
+                          >
+                            {approvingId === booking.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4 mr-1" />
+                                Approve
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                            onClick={() => handleRejectPayment(booking.id)}
+                            disabled={approvingId === booking.id || rejectingId === booking.id}
+                          >
+                            {rejectingId === booking.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <X className="w-4 h-4 mr-1" />
+                                Reject
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {activePaymentTab === 'orders' && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              <CardTitle>Unverified Shop Order Payments</CardTitle>
-              {shopOrders.length > 0 && (
-                <Badge className="bg-yellow-100 text-yellow-800">{shopOrders.length}</Badge>
-              )}
-            </div>
-            <CardDescription>
-              Review and verify payment receipts for shop orders
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {shopOrders.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>All shop order payments are verified</p>
+          <Card>
+            <CardHeader className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                <CardTitle>Unverified Shop Order Payments</CardTitle>
+                {filteredShopOrders.length > 0 && (
+                  <Badge className="bg-yellow-100 text-yellow-800">{filteredShopOrders.length}</Badge>
+                )}
               </div>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                {shopOrders.map((order) => (
-                  <div key={order.id} className="border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">Order #{order.id}</h4>
-                        <div className="flex items-center gap-1 text-sm text-gray-500">
-                          <User className="w-3 h-3" />
-                          <span>{order.first_name} {order.last_name}</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-xs text-gray-400">
-                          <Mail className="w-3 h-3" />
-                          <span>{order.email}</span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Ordered: {formatDateTime(order.created_at)}
-                        </p>
-                      </div>
-                      <span className="font-bold text-brand">
-                        {formatPrice(order.total_amount)}
-                      </span>
-                    </div>
+              <CardDescription>Review, approve, or reject payment receipts for shop orders</CardDescription>
 
-                    {/* Order Items */}
-                    <div className="space-y-1 mb-3 text-sm">
-                      {order.items?.map((item, idx) => (
-                        <div key={idx} className="flex justify-between text-gray-600">
-                          <span>{item.item_name} {item.variant_name ? `(${item.variant_name})` : ''} x{item.quantity}</span>
-                          <span className="font-medium">
-                            {formatPrice(item.price_at_purchase * item.quantity)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+              <div className="flex flex-col lg:flex-row gap-3 pt-2">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search by name, email, or reference..."
+                    value={shopSearchQuery}
+                    onChange={(e) => setShopSearchQuery(e.target.value)}
+                    className="pl-10 h-9"
+                  />
+                </div>
 
-                    {/* Receipt */}
-                    {order.payment_receipt_url && (
-                      <div className="mb-3">
-                        <button
-                          onClick={() => setShopReceiptUrl(order.payment_receipt_url)}
-                          className="flex items-center gap-2 text-sm text-brand hover:underline"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View Payment Receipt
-                        </button>
-                      </div>
-                    )}
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant={shopDateFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setShopDateFilter('all')}
+                    className={shopDateFilter === 'all' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    All Time
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={shopDateFilter === 'today' ? 'default' : 'outline'}
+                    onClick={() => setShopDateFilter('today')}
+                    className={shopDateFilter === 'today' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={shopDateFilter === 'yesterday' ? 'default' : 'outline'}
+                    onClick={() => setShopDateFilter('yesterday')}
+                    className={shopDateFilter === 'yesterday' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Yesterday
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={shopDateFilter === 'last7days' ? 'default' : 'outline'}
+                    onClick={() => setShopDateFilter('last7days')}
+                    className={shopDateFilter === 'last7days' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Last 7 Days
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={shopDateFilter === 'last30days' ? 'default' : 'outline'}
+                    onClick={() => setShopDateFilter('last30days')}
+                    className={shopDateFilter === 'last30days' ? 'bg-brand hover:bg-brand/90' : ''}
+                  >
+                    Last 30 Days
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={() => handleVerifyShopPayment(order.id, true)}
-                        disabled={shopVerifyingId === order.id}
-                      >
-                        {shopVerifyingId === order.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <>
-                            <Check className="w-4 h-4 mr-1" />
-                            Verify Payment
-                          </>
-                        )}
-                      </Button>
-                    </div>
+            <CardContent>
+              {filteredShopOrders.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p>
+                    {shopSearchQuery.trim()
+                      ? `No shop payments found matching "${shopSearchQuery}"`
+                      : shopDateFilter !== 'all'
+                      ? `No shop payments ${shopDateFilter === 'today' ? 'created today' : shopDateFilter === 'yesterday' ? 'created yesterday' : shopDateFilter === 'last7days' ? 'created in the last 7 days' : 'created in the last 30 days'}`
+                      : 'All shop order payments are verified'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="hidden xl:grid xl:grid-cols-[1.2fr_0.9fr_1.1fr_1.6fr_0.9fr_220px] gap-4 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50">
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Customer</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Order</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Date</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Items</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">Receipt / Total</p>
+                    <p className="text-xs font-semibold tracking-wide uppercase text-gray-500 text-right">Actions</p>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                  {filteredShopOrders.map((order) => (
+                    <div key={order.id} className="border border-gray-200 rounded-xl p-4 bg-white">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 xl:grid-cols-[1.2fr_0.9fr_1.1fr_1.6fr_0.9fr_220px] xl:items-center">
+                        <div>
+                          <p className="text-sm text-gray-700 flex items-center gap-1 truncate">
+                            <User className="w-3.5 h-3.5" />
+                            {order.first_name} {order.last_name}
+                          </p>
+                          <p className="text-xs text-gray-500 flex items-center gap-1 truncate">
+                            <Mail className="w-3.5 h-3.5" />
+                            {order.email}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="font-medium text-gray-900">{formatOrderReference(order.id, order.created_at)}</p>
+                        </div>
+
+                        <div>
+                          <p className="text-sm text-gray-700">{formatDateTime(order.created_at)}</p>
+                        </div>
+
+                        <div className="sm:col-span-2 xl:col-span-1">
+                          <p className="text-sm text-gray-700 line-clamp-2">
+                            {(order.items || [])
+                              .map(item => `${item.item_name}${item.variant_name ? ` (${item.variant_name})` : ''} x${item.quantity}`)
+                              .join(', ')}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-brand">{formatPrice(order.total_amount)}</p>
+                          {order.payment_receipt_url ? (
+                            <button
+                              onClick={() => order.payment_receipt_url && openReceiptViewer(order.payment_receipt_url, 'Shop Order Receipt')}
+                              className="inline-flex items-center gap-2 text-sm text-brand hover:underline mt-1"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Receipt
+                            </button>
+                          ) : (
+                            <p className="text-sm text-gray-400 mt-1">No receipt</p>
+                          )}
+                        </div>
+
+                        <div className="flex flex-col gap-2 xl:justify-self-end xl:w-full">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleApproveShopPayment(order.id)}
+                            disabled={shopVerifyingId === order.id || shopRejectingId === order.id}
+                          >
+                            {shopVerifyingId === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4 mr-1" />
+                                Approve
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                            onClick={() => handleRejectShopPayment(order.id)}
+                            disabled={shopVerifyingId === order.id || shopRejectingId === order.id}
+                          >
+                            {shopRejectingId === order.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <>
+                                <X className="w-4 h-4 mr-1" />
+                                Reject
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Shop Receipt Modal */}
-      {shopReceiptUrl && (
-        <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => setShopReceiptUrl(null)}
+      {receiptViewer && (
+        <div
+          className="fixed inset-0 z-50 bg-black/95"
+          onClick={() => setReceiptViewer(null)}
         >
-          <div 
-            className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b flex items-center justify-between bg-gray-50 sticky top-0">
-              <h3 className="font-semibold text-lg">Shop Order Receipt</h3>
+          <div className="absolute inset-x-0 top-0 z-10 p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-lg text-white">{receiptViewer.title}</h3>
+                <p className="text-xs sm:text-sm text-white/75">
+                  Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20">Esc</kbd> to close
+                </p>
+              </div>
               <div className="flex items-center gap-2">
-                <a 
-                  href={shopReceiptUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
+                <button
+                  type="button"
+                  onClick={handleDownloadReceipt}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white text-black rounded-lg hover:bg-white/90 transition-colors"
                 >
-                  Open in New Tab
-                </a>
-                <Button variant="ghost" size="sm" onClick={() => setShopReceiptUrl(null)}>
+                  <Download className="w-4 h-4" />
+                  Download Receipt
+                </button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setReceiptViewer(null)}
+                  className="text-white hover:bg-white/10 hover:text-white"
+                >
                   <X className="w-5 h-5" />
                 </Button>
               </div>
             </div>
-            <div className="p-6 overflow-auto flex-1 bg-gray-100">
-              <div className="flex justify-center">
-                <img 
-                  src={shopReceiptUrl} 
-                  alt="Payment Receipt" 
-                  className="max-w-full h-auto rounded-lg shadow-lg bg-white"
-                  style={{ maxHeight: 'calc(95vh - 120px)' }}
-                />
-              </div>
-            </div>
+          </div>
+
+          <div
+            className="h-full w-full overflow-auto p-4 sm:p-10 lg:p-14 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={receiptViewer.url}
+              alt={receiptViewer.title}
+              className="max-h-[92vh] max-w-[96vw] w-auto h-auto object-contain rounded-xl shadow-2xl bg-white"
+            />
           </div>
         </div>
       )}
 
-      {/* QR Code Settings Modal */}
       <Dialog open={showSettingsModal} onOpenChange={setShowSettingsModal}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -786,7 +991,6 @@ export function AdminPayments() {
           </DialogHeader>
 
           <div className="space-y-6">
-            {/* QR Code Upload */}
             <div className="space-y-2">
               <Label>Payment QR Code</Label>
               <input
@@ -796,12 +1000,12 @@ export function AdminPayments() {
                 accept="image/*"
                 className="hidden"
               />
-              
+
               {qrPreview ? (
                 <div className="relative inline-block">
-                  <img 
-                    src={qrPreview} 
-                    alt="QR Code Preview" 
+                  <img
+                    src={qrPreview}
+                    alt="QR Code Preview"
                     className="w-48 h-48 object-contain border border-gray-200 rounded-xl"
                   />
                   <button
@@ -822,7 +1026,6 @@ export function AdminPayments() {
               )}
             </div>
 
-            {/* Account Name */}
             <div className="space-y-2">
               <Label htmlFor="accountName">Account Name</Label>
               <Input
@@ -833,7 +1036,6 @@ export function AdminPayments() {
               />
             </div>
 
-            {/* Account Number */}
             <div className="space-y-2">
               <Label htmlFor="accountNumber">Account Number (GCash/Bank)</Label>
               <Input
@@ -844,7 +1046,6 @@ export function AdminPayments() {
               />
             </div>
 
-            {/* Instructions */}
             <div className="space-y-2">
               <Label htmlFor="instructions">Payment Instructions</Label>
               <Textarea
@@ -860,11 +1061,11 @@ export function AdminPayments() {
               <Button variant="outline" onClick={() => setShowSettingsModal(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   handleSaveSettings()
                   setShowSettingsModal(false)
-                }} 
+                }}
                 className="bg-brand hover:bg-brand-600"
                 disabled={isSaving}
               >
@@ -884,46 +1085,6 @@ export function AdminPayments() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Receipt Modal */}
-      {viewingReceipt && (
-        <div 
-          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
-          onClick={() => setViewingReceipt(null)}
-        >
-          <div 
-            className="bg-white rounded-2xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 border-b flex items-center justify-between bg-gray-50 sticky top-0">
-              <h3 className="font-semibold text-lg">Payment Receipt</h3>
-              <div className="flex items-center gap-2">
-                <a 
-                  href={viewingReceipt} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand/90 transition-colors"
-                >
-                  Open in New Tab
-                </a>
-                <Button variant="ghost" size="sm" onClick={() => setViewingReceipt(null)}>
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-            <div className="p-6 overflow-auto flex-1 bg-gray-100">
-              <div className="flex justify-center">
-                <img 
-                  src={viewingReceipt} 
-                  alt="Payment Receipt" 
-                  className="max-w-full h-auto rounded-lg shadow-lg bg-white"
-                  style={{ maxHeight: 'calc(95vh - 120px)' }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </AdminLayout>
   )
 }
