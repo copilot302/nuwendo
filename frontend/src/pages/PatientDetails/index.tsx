@@ -10,6 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Loader2, User } from 'lucide-react'
 import { BASE_URL } from '@/config/api'
 import { addressService } from '@/services/addressService'
+import {
+  getPhilippinePhoneValidationMessage,
+  maskPhilippinePhone,
+  normalizePhilippinePhone
+} from '@/lib/phone'
 
 export default function PatientDetails() {
   const navigate = useNavigate()
@@ -18,6 +23,7 @@ export default function PatientDetails() {
   
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -134,6 +140,20 @@ export default function PatientDetails() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const phoneValidationMessage = getPhilippinePhoneValidationMessage(formData.contactNumber)
+    if (phoneValidationMessage) {
+      setPhoneError(phoneValidationMessage)
+      setError(phoneValidationMessage)
+      return
+    }
+
+    const normalizedPhone = normalizePhilippinePhone(formData.contactNumber)
+    if (!normalizedPhone) {
+      setPhoneError('Please enter a valid Philippine mobile number (e.g., 0912 345 6789).')
+      setError('Please enter a valid Philippine mobile number (e.g., 0912 345 6789).')
+      return
+    }
     
     if (formData.healthGoals.length === 0) {
       setError('Please select at least one health goal')
@@ -146,11 +166,17 @@ export default function PatientDetails() {
     }
     
     setError('')
+    setPhoneError('')
     setIsLoading(true)
 
     try {
       // Store patient details in session
-      sessionStorage.setItem('patientDetails', JSON.stringify(formData))
+      const payload = {
+        ...formData,
+        contactNumber: normalizedPhone
+      }
+
+      sessionStorage.setItem('patientDetails', JSON.stringify(payload))
       
       // Save to backend
       const response = await fetch(`${BASE_URL}/api/patient/profile/${encodeURIComponent(email)}`, {
@@ -161,7 +187,7 @@ export default function PatientDetails() {
         body: JSON.stringify({
           firstName: formData.firstName,
           lastName: formData.lastName,
-          phone: formData.contactNumber,
+          phone: normalizedPhone,
           address: `${formData.streetAddress}, ${formData.barangay}, ${formData.city}, ${formData.province}, ${formData.region}`,
           region: formData.region,
           province: formData.province,
@@ -274,11 +300,26 @@ export default function PatientDetails() {
                 <Input
                   id="contactNumber"
                   type="tel"
-                  placeholder="09123456789"
+                  placeholder="0912 345 6789"
                   value={formData.contactNumber}
-                  onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
+                  onChange={(e) => {
+                    const maskedPhone = maskPhilippinePhone(e.target.value)
+                    setFormData({ ...formData, contactNumber: maskedPhone })
+                    if (phoneError) setPhoneError('')
+                    if (error) setError('')
+                  }}
+                  onBlur={() => {
+                    const validationMessage = getPhilippinePhoneValidationMessage(formData.contactNumber)
+                    setPhoneError(validationMessage)
+                  }}
+                  maxLength={13}
                   required
                 />
+                {phoneError ? (
+                  <p className="text-xs text-red-600">{phoneError}</p>
+                ) : (
+                  <p className="text-xs text-gray-500">Use PH format: 0912 345 6789</p>
+                )}
               </div>
             </div>
 

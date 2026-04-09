@@ -31,6 +31,11 @@ import {
 import CartModal from '@/components/CartModal'
 import { cartService } from '@/services/cartService'
 import { addressService } from '@/services/addressService'
+import {
+  getPhilippinePhoneValidationMessage,
+  maskPhilippinePhone,
+  normalizePhilippinePhone
+} from '@/lib/phone'
 
 interface Appointment {
   id: number
@@ -107,6 +112,7 @@ export default function PatientDashboard() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [isEditingAddress, setIsEditingAddress] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [profileFormError, setProfileFormError] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({
     firstName: '',
     lastName: '',
@@ -309,7 +315,7 @@ export default function PatientDashboard() {
         setEditForm({
           firstName: p.firstName || '',
           lastName: p.lastName || '',
-          phone: p.phone || '',
+          phone: maskPhilippinePhone(p.phone || ''),
           age: p.age || '',
           cityAddress: p.address || '',
           height: p.height || '',
@@ -375,10 +381,25 @@ export default function PatientDashboard() {
   }
 
   const handleSaveProfile = async () => {
+    setProfileFormError(null)
+
+    if (isEditingProfile) {
+      const phoneValidationMessage = getPhilippinePhoneValidationMessage(editForm.phone)
+      if (phoneValidationMessage) {
+        setProfileFormError(phoneValidationMessage)
+        return
+      }
+    }
+
     setIsSaving(true)
     try {
       const email = sessionStorage.getItem('patientEmail')
       if (!email) return
+
+      const normalizedPhone = normalizePhilippinePhone(editForm.phone)
+      const phoneToSave = isEditingProfile
+        ? normalizedPhone || ''
+        : normalizedPhone || profile?.phone || ''
 
       const response = await fetch(`${BASE_URL}/api/patient/profile/${encodeURIComponent(email)}`, {
         method: 'PUT',
@@ -388,7 +409,7 @@ export default function PatientDashboard() {
         body: JSON.stringify({
           firstName: editForm.firstName,
           lastName: editForm.lastName,
-          phone: editForm.phone,
+          phone: phoneToSave,
           address: editForm.cityAddress,
           // Structured address fields
           region: selectedRegionCode,
@@ -410,7 +431,7 @@ export default function PatientDashboard() {
           ...prev!,
           first_name: editForm.firstName,
           last_name: editForm.lastName,
-          phone: editForm.phone,
+          phone: phoneToSave,
           cityAddress: editForm.cityAddress,
           region: selectedRegionCode,
           province: selectedProvinceCode,
@@ -436,13 +457,14 @@ export default function PatientDashboard() {
     setEditForm({
       firstName: profile?.first_name || '',
       lastName: profile?.last_name || '',
-      phone: profile?.phone || '',
+      phone: maskPhilippinePhone(profile?.phone || ''),
       age: profile?.age || '',
       cityAddress: profile?.cityAddress || '',
       height: profile?.height || '',
       weight: profile?.weight || '',
       reasonForConsult: profile?.reasonForConsult || ''
     })
+    setProfileFormError(null)
     setIsEditingProfile(true)
   }
 
@@ -1561,6 +1583,12 @@ export default function PatientDashboard() {
                 )}
               </CardHeader>
               <CardContent className="space-y-4">
+                {profileFormError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{profileFormError}</p>
+                  </div>
+                )}
+
                 {isEditingProfile ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -1588,9 +1616,20 @@ export default function PatientDashboard() {
                       <label className="text-sm font-medium text-gray-900">Phone</label>
                       <Input
                         value={editForm.phone}
-                        onChange={(e) => setEditForm(prev => ({ ...prev, phone: e.target.value }))}
+                        onChange={(e) => {
+                          setEditForm(prev => ({ ...prev, phone: maskPhilippinePhone(e.target.value) }))
+                          if (profileFormError) setProfileFormError(null)
+                        }}
+                        onBlur={() => {
+                          if (!isEditingProfile) return
+                          const validationMessage = getPhilippinePhoneValidationMessage(editForm.phone)
+                          setProfileFormError(validationMessage || null)
+                        }}
+                        placeholder="0912 345 6789"
+                        maxLength={13}
                         className="mt-1"
                       />
+                      <p className="text-xs text-gray-500 mt-1">Use PH format: 0912 345 6789</p>
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-900">Age</label>
