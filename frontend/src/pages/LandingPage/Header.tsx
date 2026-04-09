@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false)
+  const [mobileAddOnOpen, setMobileAddOnOpen] = useState(false)
 
   return (
     <>
@@ -36,21 +38,40 @@ export function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-8">
-            <a href="#home" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
+            <Link to="/" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
               Home
-            </a>
-            <a href="#about" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
+            </Link>
+            <Link to="/about-us" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
               About Us
-            </a>
-            <a href="#services" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
-              Services
-            </a>
-            <a href="#why-nuwendo" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
-              Why Nuwendo
-            </a>
-            <a href="#faq" className="text-sm font-medium text-gray-700 hover:text-brand transition-colors">
-              FAQ
-            </a>
+            </Link>
+
+            <div className="relative group">
+              <Link to="/services" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-brand transition-colors">
+                Services
+              </Link>
+              <div className="absolute top-full left-0 mt-3 w-56 rounded-xl border border-gray-100 bg-white shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <Link to="/services/nuwendo-starter" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-50 hover:text-brand">
+                  Nuwendo Starter
+                </Link>
+                <Link to="/services/initial-consultation" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-50 hover:text-brand">
+                  Initial Consultation
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <Link to="/add-on" className="inline-flex items-center text-sm font-medium text-gray-700 hover:text-brand transition-colors">
+                Add On
+              </Link>
+              <div className="absolute top-full left-0 mt-3 w-56 rounded-xl border border-gray-100 bg-white shadow-xl p-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                <Link to="/add-on/follow-up" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-50 hover:text-brand">
+                  Follow Up
+                </Link>
+                <Link to="/add-on/nutrition-plan" className="block px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-brand-50 hover:text-brand">
+                  Nutrition Plan
+                </Link>
+              </div>
+            </div>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -79,11 +100,49 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="lg:hidden bg-white border-t">
             <nav className="container py-4 flex flex-col gap-4">
-              <a href="#home" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>Home</a>
-              <a href="#about" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>About Us</a>
-              <a href="#services" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>Services</a>
-              <a href="#why-nuwendo" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>Why Nuwendo</a>
-              <a href="#faq" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
+              <Link to="/" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>Home</Link>
+              <Link to="/about-us" className="text-gray-700 hover:text-brand py-2" onClick={() => setMobileMenuOpen(false)}>About Us</Link>
+
+              <div>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-gray-700 hover:text-brand py-2"
+                  onClick={() => setMobileServicesOpen(!mobileServicesOpen)}
+                >
+                  <span>Services</span>
+                </button>
+                {mobileServicesOpen && (
+                  <div className="pl-4 border-l border-gray-200 space-y-2 mt-1">
+                    <Link to="/services/nuwendo-starter" className="block text-sm text-gray-600 hover:text-brand py-1" onClick={() => setMobileMenuOpen(false)}>
+                      Nuwendo Starter
+                    </Link>
+                    <Link to="/services/initial-consultation" className="block text-sm text-gray-600 hover:text-brand py-1" onClick={() => setMobileMenuOpen(false)}>
+                      Initial Consultation
+                    </Link>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between text-gray-700 hover:text-brand py-2"
+                  onClick={() => setMobileAddOnOpen(!mobileAddOnOpen)}
+                >
+                  <span>Add On</span>
+                </button>
+                {mobileAddOnOpen && (
+                  <div className="pl-4 border-l border-gray-200 space-y-2 mt-1">
+                    <Link to="/add-on/follow-up" className="block text-sm text-gray-600 hover:text-brand py-1" onClick={() => setMobileMenuOpen(false)}>
+                      Follow Up
+                    </Link>
+                    <Link to="/add-on/nutrition-plan" className="block text-sm text-gray-600 hover:text-brand py-1" onClick={() => setMobileMenuOpen(false)}>
+                      Nutrition Plan
+                    </Link>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-4 border-t">
                 <Link to="/login" className="flex-1">
                   <Button variant="outline" className="w-full border-brand text-brand">Login</Button>

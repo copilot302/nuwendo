@@ -60,22 +60,22 @@ export function Footer() {
             <h4 className="text-lg font-semibold">Quick Links</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#about" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/about-us" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
                   Our Services
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#faq" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/add-on" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
-                  FAQs
-                </a>
+                  Add On
+                </Link>
               </li>
               <li>
                 <Link to="/signup" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
@@ -97,28 +97,28 @@ export function Footer() {
             <h4 className="text-lg font-semibold">Our Services</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/services/initial-consultation" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
                   Initial Consultation
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/services/nuwendo-starter" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
-                  Starter Program
-                </a>
+                  Nuwendo Starter
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/add-on/follow-up" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
-                  Weight Management
-                </a>
+                  Follow Up
+                </Link>
               </li>
               <li>
-                <a href="#services" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
+                <Link to="/add-on/nutrition-plan" className="text-white/70 hover:text-brand-300 transition-colors flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand-300" />
-                  Metabolic Health
-                </a>
+                  Nutrition Plan
+                </Link>
               </li>
             </ul>
           </motion.div>

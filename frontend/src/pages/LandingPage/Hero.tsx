@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Stethoscope, Users, Heart, ShieldCheck } from 'lucide-react'
+import { ArrowRight, Stethoscope, Heart, ShieldCheck, CalendarClock, ClipboardCheck, MessageSquareHeart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -13,13 +13,12 @@ export function Hero() {
       </div>
 
       <div className="container relative z-10 py-20 lg:py-32">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
+        <div className="grid lg:grid-cols-2 gap-10 items-center">
           <motion.div 
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6 }}
-            className="space-y-8"
+            className="space-y-8 max-w-3xl"
           >
             <div className="space-y-4">
               <p className="text-brand-200 font-medium tracking-wider uppercase text-sm">
@@ -37,18 +36,13 @@ export function Hero() {
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
+            <div>
               <Link to="/signup">
                 <Button size="lg" className="bg-brand hover:bg-brand-600 text-white gap-2 w-full sm:w-auto">
                   Book Consultation
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </Link>
-              <a href="#services">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
-                  View Services
-                </Button>
-              </a>
             </div>
 
             <div className="flex flex-wrap gap-6 pt-4">
@@ -67,32 +61,46 @@ export function Hero() {
             </div>
           </motion.div>
 
-          {/* Right Content - Stats Cards */}
-          <motion.div 
-            initial={{ opacity: 0, x: 50 }}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="grid grid-cols-2 gap-4"
+            className="bg-white/10 border border-white/20 backdrop-blur-sm rounded-3xl p-6 lg:p-8"
           >
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <Users className="h-10 w-10 text-brand-300 mb-4" />
-              <div className="text-3xl font-bold text-white mb-1">500+</div>
-              <p className="text-gray-300 text-sm">Patients Served</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <Heart className="h-10 w-10 text-brand-300 mb-4" />
-              <div className="text-3xl font-bold text-white mb-1">98%</div>
-              <p className="text-gray-300 text-sm">Satisfaction Rate</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <Stethoscope className="h-10 w-10 text-brand-300 mb-4" />
-              <div className="text-3xl font-bold text-white mb-1">Doctor</div>
-              <p className="text-gray-300 text-sm">Led Programs</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <ShieldCheck className="h-10 w-10 text-brand-300 mb-4" />
-              <div className="text-3xl font-bold text-white mb-1">Online</div>
-              <p className="text-gray-300 text-sm">& Clinic Consults</p>
+            <p className="text-brand-200 text-sm font-semibold uppercase tracking-wider mb-4">
+              How your care starts
+            </p>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <CalendarClock className="h-5 w-5 text-brand-200" />
+                </div>
+                <div>
+                  <p className="font-semibold">Book your consultation</p>
+                  <p className="text-sm text-gray-300">Choose your preferred schedule online in minutes.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <ClipboardCheck className="h-5 w-5 text-brand-200" />
+                </div>
+                <div>
+                  <p className="font-semibold">Get assessed by our team</p>
+                  <p className="text-sm text-gray-300">We review your history, goals, and current health profile.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <MessageSquareHeart className="h-5 w-5 text-brand-200" />
+                </div>
+                <div>
+                  <p className="font-semibold">Follow a personalized plan</p>
+                  <p className="text-sm text-gray-300">Start a doctor-led program tailored to your needs.</p>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>

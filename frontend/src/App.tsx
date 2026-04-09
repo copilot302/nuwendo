@@ -1,5 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { LandingPage } from '@/pages/LandingPage'
+import AboutUsPage from '@/pages/AboutUsPage'
+import ServicesPage from '@/pages/ServicesPage'
+import ServiceNuwendoStarterPage from '@/pages/ServiceNuwendoStarterPage'
+import ServiceInitialConsultationPage from '@/pages/ServiceInitialConsultationPage'
+import AddOnPage from '@/pages/AddOnPage'
+import AddOnFollowUpPage from '@/pages/AddOnFollowUpPage'
+import AddOnNutritionPlanPage from '@/pages/AddOnNutritionPlanPage'
 import SignUp from '@/pages/SignUp'
 import VerifyCode from '@/pages/VerifyCode'
 import PatientDetails from '@/pages/PatientDetails'
@@ -50,6 +57,13 @@ function AppRoutes() {
                 : <LandingPage />
           }
         />
+  <Route path="/about-us" element={<AboutUsPage />} />
+  <Route path="/services" element={<ServicesPage />} />
+  <Route path="/services/nuwendo-starter" element={<ServiceNuwendoStarterPage />} />
+  <Route path="/services/initial-consultation" element={<ServiceInitialConsultationPage />} />
+  <Route path="/add-on" element={<AddOnPage />} />
+  <Route path="/add-on/follow-up" element={<AddOnFollowUpPage />} />
+  <Route path="/add-on/nutrition-plan" element={<AddOnNutritionPlanPage />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/verify-code" element={<VerifyCode />} />
         <Route path="/patient-details" element={<PatientDetails />} />
