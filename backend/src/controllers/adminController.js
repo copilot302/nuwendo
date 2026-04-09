@@ -421,7 +421,7 @@ const getBookings = async (req, res) => {
     const result = await pool.query(
       `SELECT b.id, b.user_id, b.service_id, b.status, b.business_status, b.notes, 
               b.appointment_type, b.payment_status, b.payment_method, 
-              b.payment_reference, b.amount_paid, b.created_at, b.updated_at,
+        b.payment_reference, b.payment_receipt_url, b.amount_paid, b.created_at, b.updated_at,
               b.video_call_link, b.admin_notes, b.completed_at, b.completed_by,
               b.cancelled_by_type, b.cancelled_by_admin_id, b.cancelled_at,
               b.booking_date as slot_date,

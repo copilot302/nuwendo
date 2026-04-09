@@ -20,9 +20,9 @@ import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Package, ChevronLeft, ChevronRight,
-  CheckCircle, Clock, ExternalLink,
+  CheckCircle, Clock,
   User, Mail, MapPin, Loader2, AlertCircle,
-  DollarSign, Image
+  DollarSign, Image, Download, X
 } from 'lucide-react'
 import { AdminLayout } from '@/components/AdminLayout'
 import { API_URL } from '@/config/api'
@@ -69,6 +69,11 @@ interface Pagination {
   per_page: number
 }
 
+interface ReceiptViewerState {
+  url: string
+  title: string
+}
+
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
   confirmed: 'bg-blue-100 text-blue-800',
@@ -87,8 +92,7 @@ export function AdminOrders() {
   const [paymentFilter, setPaymentFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
-  const [showReceiptModal, setShowReceiptModal] = useState(false)
-  const [receiptUrl, setReceiptUrl] = useState('')
+  const [receiptViewer, setReceiptViewer] = useState<ReceiptViewerState | null>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('adminToken')
@@ -98,6 +102,25 @@ export function AdminOrders() {
     }
     fetchOrders()
   }, [navigate, statusFilter, paymentFilter])
+
+  useEffect(() => {
+    if (!receiptViewer) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReceiptViewer(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [receiptViewer])
 
   const fetchOrders = async (page = 1) => {
     setIsLoading(true)
@@ -158,9 +181,33 @@ export function AdminOrders() {
     }
   }
 
-  const viewReceipt = (url: string) => {
-    setReceiptUrl(url)
-    setShowReceiptModal(true)
+  const viewReceipt = (url: string, title: string) => {
+    setReceiptViewer({ url, title })
+  }
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptViewer?.url) return
+
+    try {
+      const response = await fetch(receiptViewer.url)
+      if (!response.ok) throw new Error('Failed to fetch receipt')
+
+      const blob = await response.blob()
+      const extension = blob.type.split('/')[1] || 'jpg'
+      const safeTitle = receiptViewer.title.toLowerCase().replace(/\s+/g, '-')
+      const fileName = `${safeTitle}-${Date.now()}.${extension}`
+
+      const blobUrl = window.URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = blobUrl
+      anchor.download = fileName
+      document.body.appendChild(anchor)
+      anchor.click()
+      anchor.remove()
+      window.URL.revokeObjectURL(blobUrl)
+    } catch {
+      window.open(receiptViewer.url, '_blank', 'noopener,noreferrer')
+    }
   }
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -298,7 +345,7 @@ export function AdminOrders() {
                       </Button>
                       {order.payment_receipt_url && (
                         <Button
-                          onClick={() => viewReceipt(order.payment_receipt_url!)}
+                          onClick={() => viewReceipt(order.payment_receipt_url!, `Order #${order.id} Receipt`)}
                           variant="outline"
                           className="w-full"
                         >
@@ -432,17 +479,6 @@ export function AdminOrders() {
                           {selectedOrder.verified_by_name && ` by ${selectedOrder.verified_by_name}`}
                         </p>
                       )}
-                      {selectedOrder.payment_receipt_url && (
-                        <Button
-                          onClick={() => viewReceipt(selectedOrder.payment_receipt_url!)}
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 w-full"
-                        >
-                          <Image className="w-4 h-4 mr-2" />
-                          View Payment Receipt
-                        </Button>
-                      )}
                     </div>
                   </div>
 
@@ -480,25 +516,52 @@ export function AdminOrders() {
           </DialogContent>
         </Dialog>
 
-        {/* Receipt Modal */}
-        <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Payment Receipt</DialogTitle>
-            </DialogHeader>
-            <div className="mt-4">
-              <img src={receiptUrl} alt="Payment Receipt" className="w-full h-auto rounded-lg" />
-              <Button
-                onClick={() => window.open(receiptUrl, '_blank')}
-                variant="outline"
-                className="w-full mt-4"
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Open in New Tab
-              </Button>
+        {receiptViewer && (
+          <div
+            className="fixed inset-0 z-50 bg-black/95"
+            onClick={() => setReceiptViewer(null)}
+          >
+            <div className="absolute inset-x-0 top-0 z-10 p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-lg text-white">{receiptViewer.title}</h3>
+                  <p className="text-xs sm:text-sm text-white/75">
+                    Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20">Esc</kbd> to close
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadReceipt}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white text-black rounded-lg hover:bg-white/90 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Receipt
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReceiptViewer(null)}
+                    className="text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </DialogContent>
-        </Dialog>
+
+            <div
+              className="h-full w-full overflow-auto p-4 sm:p-10 lg:p-14 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={receiptViewer.url}
+                alt={receiptViewer.title}
+                className="max-h-[92vh] max-w-[96vw] w-auto h-auto object-contain rounded-xl shadow-2xl bg-white"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )

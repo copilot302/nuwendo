@@ -44,6 +44,8 @@ import {
   FileText,
   Target,
   Activity,
+  Eye,
+  Download,
 } from 'lucide-react';
 import { API_URL } from '@/config/api';
 
@@ -70,6 +72,7 @@ interface Booking {
   cancelled_at?: string;
   cancelled_by_type?: 'admin' | 'patient' | null;
   cancelled_by_name?: string | null;
+  payment_receipt_url?: string | null;
   created_at: string;
   reschedule_count?: number;
   original_booking_date?: string;
@@ -100,6 +103,11 @@ interface PatientProfile {
     service_name: string;
     amount_paid: number;
   }>;
+}
+
+interface ReceiptViewerState {
+  url: string;
+  title: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -280,6 +288,7 @@ export default function AdminBookings() {
   const [isPatientProfileOpen, setIsPatientProfileOpen] = useState(false);
   const [loadingPatientProfile, setLoadingPatientProfile] = useState(false);
   const [patientProfileError, setPatientProfileError] = useState<string | null>(null);
+  const [receiptViewer, setReceiptViewer] = useState<ReceiptViewerState | null>(null);
 
   const fetchBookings = async () => {
     try {
@@ -307,6 +316,25 @@ export default function AdminBookings() {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  useEffect(() => {
+    if (!receiptViewer) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setReceiptViewer(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [receiptViewer]);
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch =
@@ -577,6 +605,35 @@ export default function AdminBookings() {
     return { label: 'Scheduled', className: 'bg-gray-100 text-gray-700' };
   };
 
+  const openReceiptViewer = (url: string, title: string) => {
+    setReceiptViewer({ url, title });
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!receiptViewer?.url) return;
+
+    try {
+      const response = await fetch(receiptViewer.url);
+      if (!response.ok) throw new Error('Failed to fetch receipt');
+
+      const blob = await response.blob();
+      const extension = blob.type.split('/')[1] || 'jpg';
+      const safeTitle = receiptViewer.title.toLowerCase().replace(/\s+/g, '-');
+      const fileName = `${safeTitle}-${Date.now()}.${extension}`;
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = blobUrl;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(receiptViewer.url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -782,20 +839,15 @@ export default function AdminBookings() {
                         View
                       </Button>
 
-                      {canReschedule && (
+                      {booking.payment_receipt_url && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-8 border-blue-300 text-blue-700 hover:bg-blue-50"
-                          onClick={() => {
-                            setSelectedBooking(booking);
-                            setRescheduleForm({ new_date: '', new_time: '', reason: '' });
-                            setRescheduleError(null);
-                            setAvailableSlots([]);
-                            setShowRescheduleDialog(true);
-                          }}
+                          onClick={() => openReceiptViewer(booking.payment_receipt_url!, `Booking #${booking.id} Receipt`)}
                         >
-                          Reschedule
+                          <Eye className="h-4 w-4 mr-1" />
+                          View Receipt
                         </Button>
                       )}
 
@@ -807,6 +859,21 @@ export default function AdminBookings() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-44">
+                            {canReschedule && (
+                              <DropdownMenuItem
+                                className="text-blue-700 focus:text-blue-700"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setRescheduleForm({ new_date: '', new_time: '', reason: '' });
+                                  setRescheduleError(null);
+                                  setAvailableSlots([]);
+                                  setShowRescheduleDialog(true);
+                                }}
+                              >
+                                Reschedule Appointment
+                              </DropdownMenuItem>
+                            )}
+
                             {booking.business_status !== 'cancelled' && booking.business_status !== 'completed' && (
                               <DropdownMenuItem
                                 className="text-red-700 focus:text-red-700"
@@ -1394,6 +1461,53 @@ export default function AdminBookings() {
             )}
           </DialogContent>
         </Dialog>
+
+        {receiptViewer && (
+          <div
+            className="fixed inset-0 z-50 bg-black/95"
+            onClick={() => setReceiptViewer(null)}
+          >
+            <div className="absolute inset-x-0 top-0 z-10 p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-lg text-white">{receiptViewer.title}</h3>
+                  <p className="text-xs sm:text-sm text-white/75">
+                    Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 border border-white/20">Esc</kbd> to close
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadReceipt}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white text-black rounded-lg hover:bg-white/90 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Receipt
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReceiptViewer(null)}
+                    className="text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="h-full w-full overflow-auto p-4 sm:p-10 lg:p-14 flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={receiptViewer.url}
+                alt={receiptViewer.title}
+                className="max-h-[92vh] max-w-[96vw] w-auto h-auto object-contain rounded-xl shadow-2xl bg-white"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Business Status Update Dialog */}
         <Dialog open={showBusinessStatusDialog} onOpenChange={setShowBusinessStatusDialog}>
