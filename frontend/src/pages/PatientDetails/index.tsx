@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Loader2, User } from 'lucide-react'
+import { Loader2, User } from 'lucide-react'
 import { BASE_URL } from '@/config/api'
 import { addressService } from '@/services/addressService'
 import {
@@ -16,15 +16,71 @@ import {
   normalizePhilippinePhone
 } from '@/lib/phone'
 
+const PATIENT_DETAILS_DRAFT_KEY = 'patientDetailsDraft'
+
+interface PatientDetailsFormData {
+  firstName: string
+  lastName: string
+  age: string
+  contactNumber: string
+  region: string
+  province: string
+  city: string
+  barangay: string
+  streetAddress: string
+  height: string
+  weight: string
+  reasonForConsult: string
+  healthGoals: string[]
+}
+
+interface PatientDetailsDraft {
+  formData: PatientDetailsFormData
+  selectedRegionCode: string
+  selectedProvinceCode: string
+  selectedCityCode: string
+}
+
+interface PersistedPatientDetails extends PatientDetailsFormData {
+  selectedRegionCode?: string
+  selectedProvinceCode?: string
+  selectedCityCode?: string
+}
+
+const normalizeLocationName = (value: string | undefined | null) =>
+  (value || '').trim().toLowerCase()
+
+const hasUsableDraftData = (draft: Partial<PatientDetailsDraft> | null | undefined) => {
+  if (!draft || !draft.formData) return false
+
+  const data = draft.formData
+
+  return Boolean(
+    data.firstName?.trim() ||
+    data.lastName?.trim() ||
+    data.age?.trim() ||
+    data.contactNumber?.trim() ||
+    data.region?.trim() ||
+    data.province?.trim() ||
+    data.city?.trim() ||
+    data.barangay?.trim() ||
+    data.streetAddress?.trim() ||
+    data.height?.trim() ||
+    data.weight?.trim() ||
+    data.reasonForConsult?.trim() ||
+    (Array.isArray(data.healthGoals) && data.healthGoals.length > 0) ||
+    draft.selectedRegionCode ||
+    draft.selectedProvinceCode ||
+    draft.selectedCityCode
+  )
+}
+
 export default function PatientDetails() {
   const navigate = useNavigate()
   const email = sessionStorage.getItem('signupEmail') || ''
   const code = sessionStorage.getItem('verificationCode') || ''
-  
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [phoneError, setPhoneError] = useState('')
-  const [formData, setFormData] = useState({
+
+  const initialFormData: PatientDetailsFormData = {
     firstName: '',
     lastName: '',
     age: '',
@@ -37,8 +93,13 @@ export default function PatientDetails() {
     height: '',
     weight: '',
     reasonForConsult: '',
-    healthGoals: [] as string[]
-  })
+    healthGoals: []
+  }
+  
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [phoneError, setPhoneError] = useState('')
+  const [formData, setFormData] = useState<PatientDetailsFormData>(initialFormData)
 
   const [regions, setRegions] = useState<Array<{code: string, name: string}>>([])
   const [provinces, setProvinces] = useState<Array<{code: string, name: string}>>([])
@@ -47,9 +108,115 @@ export default function PatientDetails() {
   const [selectedRegionCode, setSelectedRegionCode] = useState('')
   const [selectedProvinceCode, setSelectedProvinceCode] = useState('')
   const [selectedCityCode, setSelectedCityCode] = useState('')
+  const [isDraftHydrated, setIsDraftHydrated] = useState(false)
 
   useEffect(() => {
-    loadRegions()
+    const initializeForm = async () => {
+      const regionsData = await loadRegions()
+
+      const rawDraft = sessionStorage.getItem(PATIENT_DETAILS_DRAFT_KEY)
+      const rawSavedDetails = sessionStorage.getItem('patientDetails')
+      let parsedDraft: PatientDetailsDraft | null = null
+  let parsedSavedDetails: PersistedPatientDetails | null = null
+
+      if (rawDraft) {
+        try {
+          parsedDraft = JSON.parse(rawDraft)
+        } catch (draftParseError) {
+          console.error('Failed to parse patient details draft:', draftParseError)
+        }
+      }
+
+      if (rawSavedDetails) {
+        try {
+          parsedSavedDetails = JSON.parse(rawSavedDetails)
+        } catch (savedParseError) {
+          console.error('Failed to parse saved patient details:', savedParseError)
+        }
+      }
+
+      const source = hasUsableDraftData(parsedDraft)
+        ? { parsed: parsedDraft, sourceType: 'draft' as const }
+        : parsedSavedDetails
+          ? { parsed: parsedSavedDetails, sourceType: 'saved' as const }
+          : null
+
+      if (!source) {
+        setIsDraftHydrated(true)
+        return
+      }
+
+      try {
+        const parsed = source.parsed
+
+        const parsedFormData: PatientDetailsFormData = (source.sourceType === 'draft' && (parsed as PatientDetailsDraft)?.formData)
+          ? {
+              ...initialFormData,
+              ...(parsed as PatientDetailsDraft).formData,
+              healthGoals: Array.isArray((parsed as PatientDetailsDraft).formData.healthGoals) ? (parsed as PatientDetailsDraft).formData.healthGoals : []
+            }
+          : {
+              ...initialFormData,
+              ...(parsed as PersistedPatientDetails),
+              healthGoals: Array.isArray((parsed as PersistedPatientDetails)?.healthGoals) ? (parsed as PersistedPatientDetails).healthGoals : []
+            }
+
+        if (parsedFormData.contactNumber) {
+          parsedFormData.contactNumber = maskPhilippinePhone(parsedFormData.contactNumber)
+        }
+
+        setFormData(parsedFormData)
+
+        const savedRegionCode = source.sourceType === 'draft'
+          ? (parsed as PatientDetailsDraft)?.selectedRegionCode || ''
+          : (parsed as PersistedPatientDetails)?.selectedRegionCode || ''
+        const savedProvinceCode = source.sourceType === 'draft'
+          ? (parsed as PatientDetailsDraft)?.selectedProvinceCode || ''
+          : (parsed as PersistedPatientDetails)?.selectedProvinceCode || ''
+        const savedCityCode = source.sourceType === 'draft'
+          ? (parsed as PatientDetailsDraft)?.selectedCityCode || ''
+          : (parsed as PersistedPatientDetails)?.selectedCityCode || ''
+
+        const resolvedRegionCode =
+          savedRegionCode ||
+          regionsData.find((r: { name: string; code: string }) => normalizeLocationName(r.name) === normalizeLocationName(parsedFormData.region))?.code ||
+          ''
+
+        if (!resolvedRegionCode) return
+
+        setSelectedRegionCode(resolvedRegionCode)
+        const provincesData = await addressService.getProvinces(resolvedRegionCode)
+        setProvinces(provincesData)
+
+        const resolvedProvinceCode =
+          savedProvinceCode ||
+          provincesData.find((p: { name: string; code: string }) => normalizeLocationName(p.name) === normalizeLocationName(parsedFormData.province))?.code ||
+          ''
+
+        if (!resolvedProvinceCode) return
+
+        setSelectedProvinceCode(resolvedProvinceCode)
+        const citiesData = await addressService.getCities(resolvedProvinceCode)
+        setCities(citiesData)
+
+        const resolvedCityCode =
+          savedCityCode ||
+          citiesData.find((c: { name: string; code: string }) => normalizeLocationName(c.name) === normalizeLocationName(parsedFormData.city))?.code ||
+          ''
+
+        if (!resolvedCityCode) return
+
+        setSelectedCityCode(resolvedCityCode)
+        const barangaysData = await addressService.getBarangays(resolvedCityCode)
+        setBarangays(barangaysData)
+      } catch (restoreError) {
+        console.error('Failed to restore patient details draft:', restoreError)
+      } finally {
+        setIsDraftHydrated(true)
+      }
+    }
+
+    initializeForm()
   }, [])
 
   useEffect(() => {
@@ -58,19 +225,36 @@ export default function PatientDetails() {
     }
   }, [email, code, navigate])
 
+  useEffect(() => {
+    if (!isDraftHydrated) return
+
+    const draft: PatientDetailsDraft = {
+      formData,
+      selectedRegionCode,
+      selectedProvinceCode,
+      selectedCityCode
+    }
+
+    sessionStorage.setItem(PATIENT_DETAILS_DRAFT_KEY, JSON.stringify(draft))
+  }, [formData, selectedRegionCode, selectedProvinceCode, selectedCityCode, isDraftHydrated])
+
   const loadRegions = async () => {
     try {
       const data = await addressService.getRegions()
       setRegions(data)
+      return data
     } catch (err) {
       console.error('Failed to load regions:', err)
+      return []
     }
   }
 
   const handleRegionChange = async (regionCode: string) => {
+    if (!regionCode) return
+
     setSelectedRegionCode(regionCode)
     const region = regions.find(r => r.code === regionCode)
-    setFormData({ ...formData, region: region?.name || '', province: '', city: '', barangay: '' })
+    setFormData(prev => ({ ...prev, region: region?.name || '', province: '', city: '', barangay: '' }))
     setSelectedProvinceCode('')
     setSelectedCityCode('')
     setProvinces([])
@@ -85,9 +269,11 @@ export default function PatientDetails() {
   }
 
   const handleProvinceChange = async (provinceCode: string) => {
+    if (!provinceCode) return
+
     setSelectedProvinceCode(provinceCode)
     const province = provinces.find(p => p.code === provinceCode)
-    setFormData({ ...formData, province: province?.name || '', city: '', barangay: '' })
+    setFormData(prev => ({ ...prev, province: province?.name || '', city: '', barangay: '' }))
     setSelectedCityCode('')
     setCities([])
     setBarangays([])
@@ -100,9 +286,11 @@ export default function PatientDetails() {
   }
 
   const handleCityChange = async (cityCode: string) => {
+    if (!cityCode) return
+
     setSelectedCityCode(cityCode)
     const city = cities.find(c => c.code === cityCode)
-    setFormData({ ...formData, city: city?.name || '', barangay: '' })
+    setFormData(prev => ({ ...prev, city: city?.name || '', barangay: '' }))
     setBarangays([])
     try {
       const barangaysData = await addressService.getBarangays(cityCode)
@@ -113,7 +301,7 @@ export default function PatientDetails() {
   }
 
   const handleBarangayChange = (barangayName: string) => {
-    setFormData({ ...formData, barangay: barangayName })
+    setFormData(prev => ({ ...prev, barangay: barangayName }))
   }
 
   const healthGoalOptions = [
@@ -173,7 +361,10 @@ export default function PatientDetails() {
       // Store patient details in session
       const payload = {
         ...formData,
-        contactNumber: normalizedPhone
+        contactNumber: normalizedPhone,
+        selectedRegionCode,
+        selectedProvinceCode,
+        selectedCityCode
       }
 
       sessionStorage.setItem('patientDetails', JSON.stringify(payload))
@@ -232,15 +423,8 @@ export default function PatientDetails() {
       {/* Left Side - Form */}
       <div className="flex-1 flex flex-col px-6 sm:px-12 lg:px-20 py-12 bg-white overflow-auto">
         <div className="w-full max-w-2xl mx-auto">
-          {/* Back Button & Logo */}
-          <div className="mb-8 flex items-center justify-between">
-            <button
-              onClick={() => navigate('/verify-code')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span>Back</span>
-            </button>
+          {/* Logo */}
+          <div className="mb-8 flex items-center justify-end">
             <img src="/logo-icon.svg" alt="Nuwendo" className="h-12 w-12" />
           </div>
 

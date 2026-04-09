@@ -57,8 +57,8 @@ export default function ChooseService() {
     if (isAuthenticated && patientEmail) {
       navigate('/dashboard')
     } else {
-      // Otherwise go back to verify-code (signup flow)
-      navigate('/verify-code')
+      // Signup flow: return to patient details, not verification code
+      navigate('/patient-details')
     }
   }
   
