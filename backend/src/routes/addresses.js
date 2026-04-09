@@ -12,6 +12,13 @@ router.get('/regions', (req, res) => {
 });
 
 // Get provinces by region
+router.get('/provinces', (req, res) => {
+  res.json({
+    success: true,
+    provinces: []
+  });
+});
+
 router.get('/provinces/:regionCode', (req, res) => {
   const { regionCode } = req.params;
   const provinces = getProvincesByRegion(regionCode);
@@ -22,6 +29,13 @@ router.get('/provinces/:regionCode', (req, res) => {
 });
 
 // Get cities by province
+router.get('/cities', (req, res) => {
+  res.json({
+    success: true,
+    cities: []
+  });
+});
+
 router.get('/cities/:provinceCode', (req, res) => {
   const { provinceCode } = req.params;
   const cities = philippineAddresses.cities[provinceCode] || [];
@@ -32,6 +46,13 @@ router.get('/cities/:provinceCode', (req, res) => {
 });
 
 // Get barangays by city
+router.get('/barangays', (req, res) => {
+  res.json({
+    success: true,
+    barangays: []
+  });
+});
+
 router.get('/barangays/:cityCode', (req, res) => {
   const { cityCode } = req.params;
   const barangays = getBarangays(cityCode);
