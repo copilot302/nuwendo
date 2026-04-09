@@ -425,7 +425,7 @@ export default function PatientDetails() {
         <div className="w-full max-w-2xl mx-auto">
           {/* Logo */}
           <div className="mb-8 flex items-center justify-end">
-            <img src="/logo-icon.svg" alt="Nuwendo" className="h-12 w-12" />
+            <img src="/9.svg" alt="Nuwendo" className="h-12 w-12" />
           </div>
 
           {/* Heading */}
