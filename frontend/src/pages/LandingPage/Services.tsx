@@ -1,31 +1,30 @@
 import { ArrowRight, Monitor, Building2 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 
 const services = [
   {
     number: '01',
-    title: 'Initial Medical Consultation',
-    description: 'Full medical intake, risk screening, baseline goals, and a personalized starter plan.',
+    title: 'Nuwendo Starter',
+    description: 'An entry-level program designed to kickstart your metabolic health journey with structured support and foundational interventions. Ideal for individuals beginning weight loss or metabolic optimization under guided care.',
     image: '/9.png',
   },
   {
     number: '02',
-    title: 'Nuwendo Starter',
-    description: 'Structured follow-ups, habit coaching, and adjustments based on your response.',
+    title: 'Nutrition Plan',
+    description: 'A personalized, evidence-based meal plan tailored to your metabolic profile, preferences, and health goals. Focuses on sustainable eating habits that support weight management and overall wellness.',
     image: '/8.png',
   },
   {
     number: '03',
-    title: 'Tirzepatide Vial',
-    description: 'Prescription guidance with education, monitoring, and scheduled follow-ups.',
+    title: 'Metabolic Work-up',
+    description: 'A comprehensive set of diagnostic tests and assessments to evaluate key metabolic markers such as glucose, insulin, lipids, and hormones. Provides data-driven insights to guide targeted and effective treatment plans.',
     image: '/7.png',
   },
   {
     number: '04',
-    title: 'Tirzepatide Clinic',
-    description: 'In-clinic tirzepatide administration with physician supervision.',
+    title: 'BeFit x Nuwendo',
+    description: 'A collaborative program combining fitness training and medical metabolic care to deliver a holistic approach to weight loss and health optimization. Integrates structured exercise with personalized clinical guidance for more effective and sustainable results.',
     image: '/6.png',
   },
 ]
@@ -63,7 +62,7 @@ export function Services() {
         </motion.div>
 
         {/* Services Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
           {services.map((service, index) => (
             <motion.div
               key={index}
@@ -71,7 +70,7 @@ export function Services() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
-              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100"
+              className="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 h-full flex flex-col"
             >
               {/* Image */}
               <div className="relative h-48 bg-gradient-to-br from-brand-700 to-brand-800 overflow-hidden">
@@ -86,14 +85,14 @@ export function Services() {
               </div>
 
               {/* Content */}
-              <div className="p-6">
-                <h3 className="text-lg font-bold text-brand-800 mb-2 group-hover:text-brand transition-colors">
+              <div className="p-6 flex flex-col flex-1">
+                <h3 className="text-3xl font-extrabold text-brand-800 leading-tight min-h-[6.5rem] group-hover:text-brand transition-colors">
                   {service.title}
                 </h3>
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                <p className="text-gray-600 text-base leading-relaxed flex-1">
                   {service.description}
                 </p>
-                <Link to="/signup" className="inline-flex items-center gap-2 text-brand text-sm font-medium hover:gap-3 transition-all">
+                <Link to="/signup" className="inline-flex items-center gap-2 text-brand text-lg font-medium mt-6 hover:gap-3 transition-all">
                   Book Now
                   <ArrowRight className="h-4 w-4" />
                 </Link>
@@ -101,21 +100,6 @@ export function Services() {
             </motion.div>
           ))}
         </div>
-
-        {/* CTA */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mt-12"
-        >
-          <Link to="/signup">
-            <Button size="lg" className="bg-brand hover:bg-brand-600 text-white gap-2">
-              View All Services
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </motion.div>
       </div>
     </section>
   )
