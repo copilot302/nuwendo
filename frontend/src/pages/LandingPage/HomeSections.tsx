@@ -1,34 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, ChevronLeft, ChevronRight, HeartPulse, MessagesSquare, Percent, UsersRound } from 'lucide-react'
+import { ArrowRight, Building2, HeartPulse, MessagesSquare, Monitor, Percent, UsersRound } from 'lucide-react'
 
 const serviceCards = [
   {
     number: '01',
-    title: 'Initial Medical Consultation',
-    description: 'Try a complimentary session today!',
+    title: 'Nuwendo Starter',
+    description: 'An entry-level program designed to kickstart your metabolic health journey with structured support and foundational interventions. Ideal for individuals beginning weight loss or metabolic optimization under guided care.',
+    image: '/9.png',
   },
   {
     number: '02',
-    title: 'Nuwendo Starter',
-    description: 'Try a complimentary session today!',
+    title: 'Nutrition Plan',
+    description: 'A personalized, evidence-based meal plan tailored to your metabolic profile, preferences, and health goals. Focuses on sustainable eating habits that support weight management and overall wellness.',
+    image: '/8.png',
   },
   {
     number: '03',
-    title: 'Tirzepatide Vial',
-    description: 'Doctor-guided protocol tailored to your metabolic needs.',
+    title: 'Metabolic Work-up',
+    description: 'A comprehensive set of diagnostic tests and assessments to evaluate key metabolic markers such as glucose, insulin, lipids, and hormones. Provides data-driven insights to guide targeted and effective treatment plans.',
+    image: '/7.png',
   },
   {
     number: '04',
-    title: 'Tirzepatide Clinic',
-    description: 'In-clinic support with medical monitoring and follow-up.',
-  },
-  {
-    number: '05',
-    title: 'Tirzepatide Shot',
-    description: 'Convenient administration with clinician-backed guidance.',
+    title: 'BeFit x Nuwendo',
+    description: 'A collaborative program combining fitness training and medical metabolic care to deliver a holistic approach to weight loss and health optimization. Integrates structured exercise with personalized clinical guidance for more effective and sustainable results.',
+    image: '/6.png',
   },
 ]
 
@@ -40,7 +39,6 @@ const rotatingLines = [
 ]
 
 export function HomeSections() {
-  const trackRef = useRef<HTMLDivElement | null>(null)
   const [currentLine, setCurrentLine] = useState(0)
 
   useEffect(() => {
@@ -50,22 +48,6 @@ export function HomeSections() {
 
     return () => window.clearInterval(timer)
   }, [])
-
-  const cardWidth = useMemo(() => {
-    if (typeof window === 'undefined') return 320
-    if (window.innerWidth < 768) return window.innerWidth - 64
-    if (window.innerWidth < 1024) return 360
-    return 390
-  }, [])
-
-  const scrollCards = (direction: 'prev' | 'next') => {
-    if (!trackRef.current) return
-
-    trackRef.current.scrollBy({
-      left: direction === 'next' ? cardWidth : -cardWidth,
-      behavior: 'smooth',
-    })
-  }
 
   return (
     <>
@@ -110,54 +92,70 @@ export function HomeSections() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
             >
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <h3 className="text-2xl md:text-3xl font-extrabold text-brand-800">Programs & Services</h3>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => scrollCards('prev')}
-                    className="h-10 w-10 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 flex items-center justify-center"
-                    aria-label="Previous services"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => scrollCards('next')}
-                    className="h-10 w-10 rounded-full border border-slate-300 text-slate-700 hover:bg-slate-100 flex items-center justify-center"
-                    aria-label="Next services"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
+              <div className="text-center mb-12">
+                <p className="text-brand font-medium mb-2 uppercase tracking-[0.16em]">ONLINE & CLINIC CONSULTS</p>
+                <h3 className="text-3xl md:text-5xl font-black text-brand-800">Our Services &amp; Programs</h3>
+                <p className="text-slate-600 max-w-3xl mx-auto mt-4 text-lg">
+                  Looking for trusted medical weight management? Discover our full range of doctor-led in-clinic and online care services.
+                </p>
+
+                <div className="flex justify-center gap-4 mt-7 flex-wrap">
+                  <div className="inline-flex items-center gap-2 bg-brand-100 text-brand px-5 py-2.5 rounded-full text-base font-semibold">
+                    <Monitor className="h-4 w-4" />
+                    Online Consults
+                  </div>
+                  <div className="inline-flex items-center gap-2 bg-brand/10 text-brand px-5 py-2.5 rounded-full text-base font-semibold">
+                    <Building2 className="h-4 w-4" />
+                    Clinic Visits
+                  </div>
                 </div>
               </div>
 
-              <div
-                ref={trackRef}
-                className="flex gap-5 overflow-x-auto snap-x snap-mandatory pb-3 [&::-webkit-scrollbar]:hidden"
-              >
-                {serviceCards.map((service) => (
-                  <article
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-[1400px] mx-auto">
+                {serviceCards.map((service, index) => (
+                  <motion.article
                     key={service.number}
-                    className="min-w-[85%] md:min-w-[360px] lg:min-w-[390px] snap-start rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"
+                    initial={{ opacity: 0, y: 24 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.08 }}
+                    className="group rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 h-full flex flex-col"
                   >
-                    <p className="text-sm font-black tracking-[0.2em] text-brand">{service.number}</p>
-                    <h4 className="mt-3 text-2xl font-bold text-brand-800">{service.title}</h4>
-                    <p className="mt-3 text-slate-600 leading-relaxed">{service.description}</p>
-                    <Link to="/signup" className="inline-flex items-center gap-2 mt-6 text-brand font-semibold hover:underline">
-                      Learn more
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </article>
+                    <div className="relative h-44 bg-slate-200 overflow-hidden">
+                      <img
+                        src={service.image}
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-4 left-4 bg-brand text-white text-2xl font-black px-3 py-1.5 rounded-xl leading-none">
+                        {service.number}
+                      </div>
+                    </div>
+
+                    <div className="p-6 flex flex-col flex-1">
+                      <h4 className="text-[2rem] font-extrabold text-brand-800 leading-[1.08] tracking-tight min-h-[4.4rem]">
+                        {service.title}
+                      </h4>
+                      <p className="mt-3 text-slate-600 leading-relaxed text-base">{service.description}</p>
+                      <Link to="/signup" className="inline-flex items-center gap-2 mt-auto pt-6 text-brand font-semibold hover:underline">
+                        Book Now
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </div>
+                  </motion.article>
                 ))}
               </div>
 
-              <div className="mt-8 text-center">
+              <div className="mt-10 text-center">
                 <Link to="/services">
-                  <Button className="bg-brand hover:bg-brand-600 text-white">View All Services</Button>
+                  <Button className="bg-brand hover:bg-brand-600 text-white gap-2 px-8 py-6 text-base">
+                    View All Services
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
                 </Link>
               </div>
             </motion.div>
+
           </div>
         </div>
       </section>
