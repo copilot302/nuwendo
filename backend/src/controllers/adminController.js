@@ -877,21 +877,47 @@ const getPatientProfile = async (req, res) => {
 
     const patient = userResult.rows[0];
 
+    // Production-safe: some environments may not yet have newer booking lifecycle columns.
+    const bookingColumnsResult = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = 'bookings'
+         AND column_name = ANY($1::text[])`,
+      [[
+        'cancelled_by_type',
+        'cancelled_at',
+        'completed_at',
+        'cancelled_by_admin_id',
+        'completed_by'
+      ]]
+    );
+
+    const bookingColumns = new Set(bookingColumnsResult.rows.map((row) => row.column_name));
+    const hasCancelledByType = bookingColumns.has('cancelled_by_type');
+    const hasCancelledAt = bookingColumns.has('cancelled_at');
+    const hasCompletedAt = bookingColumns.has('completed_at');
+    const hasCancelledByAdminId = bookingColumns.has('cancelled_by_admin_id');
+    const hasCompletedBy = bookingColumns.has('completed_by');
+
     // Get booking history
-    const bookingsResult = await pool.query(
-      `SELECT b.id, b.booking_date, b.booking_time, b.status, b.business_status, b.amount_paid, b.appointment_type,
-              b.cancelled_by_type, b.cancelled_at,
-              b.completed_at,
+    const bookingHistoryQuery = `SELECT b.id, b.booking_date, b.booking_time, b.status, b.business_status, b.amount_paid, b.appointment_type,
+              ${hasCancelledByType ? 'b.cancelled_by_type' : 'NULL::text AS cancelled_by_type'},
+              ${hasCancelledAt ? 'b.cancelled_at' : 'NULL::timestamp AS cancelled_at'},
+              ${hasCompletedAt ? 'b.completed_at' : 'NULL::timestamp AS completed_at'},
               s.name as service_name,
-              completed_admin.full_name as completed_by_name,
-              cancelled_admin.full_name as cancelled_by_name
+              ${hasCompletedBy ? 'completed_admin.full_name' : 'NULL::text'} as completed_by_name,
+              ${hasCancelledByAdminId ? 'cancelled_admin.full_name' : 'NULL::text'} as cancelled_by_name
        FROM bookings b
        JOIN services s ON b.service_id = s.id
-       LEFT JOIN admin_users completed_admin ON b.completed_by = completed_admin.id
-       LEFT JOIN admin_users cancelled_admin ON b.cancelled_by_admin_id = cancelled_admin.id
+       ${hasCompletedBy ? 'LEFT JOIN admin_users completed_admin ON b.completed_by = completed_admin.id' : ''}
+       ${hasCancelledByAdminId ? 'LEFT JOIN admin_users cancelled_admin ON b.cancelled_by_admin_id = cancelled_admin.id' : ''}
        WHERE b.user_id = $1
        ORDER BY b.booking_date DESC, b.booking_time DESC
-       LIMIT 20`,
+       LIMIT 20`;
+
+    const bookingsResult = await pool.query(
+      bookingHistoryQuery,
       [patient.id]
     );
 
