@@ -137,7 +137,8 @@ router.get('/orders', [
   query('page').optional().isInt({ min: 1 }).withMessage('Page must be positive integer'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be 1-100'),
   query('status').optional().isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']).withMessage('Invalid status'),
-  query('payment_verified').optional().isBoolean().withMessage('payment_verified must be boolean')
+  query('payment_verified').optional().isBoolean().withMessage('payment_verified must be boolean'),
+  query('include_pending').optional().isBoolean().withMessage('include_pending must be boolean')
 ], getOrders);
 
 router.patch('/orders/:id/status', [

@@ -203,7 +203,7 @@ export function AdminPayments() {
   const fetchShopOrders = async () => {
     try {
       const token = localStorage.getItem('adminToken')
-      const response = await fetch(`${API_URL}/admin/orders?payment_verified=false&limit=50`, {
+      const response = await fetch(`${API_URL}/admin/orders?status=pending&payment_verified=false&limit=50`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
       const data = await response.json()

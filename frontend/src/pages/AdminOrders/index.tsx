@@ -143,7 +143,7 @@ export function AdminOrders() {
     setError('')
     try {
       const token = localStorage.getItem('adminToken')
-      const params = new URLSearchParams({ page: String(page), limit: '20' })
+  const params = new URLSearchParams({ page: String(page), limit: '20', include_pending: 'false' })
       if (statusFilter !== 'all') params.append('status', statusFilter)
       if (paymentFilter !== 'all') params.append('payment_verified', paymentFilter)
 

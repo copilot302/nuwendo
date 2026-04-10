@@ -78,7 +78,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           fetch(`${API_URL}/admin/pending-payments`, {
             headers: { Authorization: `Bearer ${token}` }
           }),
-          fetch(`${API_URL}/admin/orders?payment_verified=false&limit=1`, {
+          fetch(`${API_URL}/admin/orders?status=pending&payment_verified=false&limit=1`, {
             headers: { Authorization: `Bearer ${token}` }
           })
         ])

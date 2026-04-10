@@ -711,7 +711,43 @@ export default function PatientDashboard() {
       case 'delivered': return 'bg-green-100 text-green-800'
       case 'received': return 'bg-green-100 text-green-800'
       case 'cancelled': return 'bg-red-100 text-red-800'
+      case 'rejected': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const getOrderStatusInfo = (order: any) => {
+    if (order.status === 'cancelled' && !order.payment_verified) {
+      return {
+        label: 'rejected',
+        className: getStatusColor('rejected')
+      }
+    }
+
+    return {
+      label: order.status,
+      className: getStatusColor(order.status)
+    }
+  }
+
+  const getOrderPaymentInfo = (order: any) => {
+    if (order.status === 'cancelled' && !order.payment_verified) {
+      return {
+        label: 'Payment Rejected',
+        className: 'text-red-600'
+      }
+    }
+
+    if (order.payment_verified) {
+      return {
+        label: 'Payment Verified',
+        className: 'text-green-600'
+      }
+    }
+
+    return {
+      label: 'Payment Pending',
+      className: 'text-yellow-600'
     }
   }
 
@@ -1139,6 +1175,11 @@ export default function PatientDashboard() {
                     {orders.map((order: any) => (
                       <Card key={order.id}>
                         <CardContent className="p-4">
+                          {(() => {
+                            const orderStatusInfo = getOrderStatusInfo(order)
+                            const paymentInfo = getOrderPaymentInfo(order)
+
+                            return (
                           <div className="flex items-start justify-between mb-3">
                             <div>
                               <p className="text-sm text-gray-500">
@@ -1148,16 +1189,14 @@ export default function PatientDashboard() {
                               </p>
                             </div>
                             <div className="flex flex-col items-end gap-1">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(order.status)}`}>
-                                {order.status}
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${orderStatusInfo.className}`}>
+                                {orderStatusInfo.label}
                               </span>
-                              {order.payment_verified ? (
-                                <span className="text-xs text-green-600 font-medium">Payment Verified</span>
-                              ) : (
-                                <span className="text-xs text-yellow-600 font-medium">Payment Pending</span>
-                              )}
+                              <span className={`text-xs font-medium ${paymentInfo.className}`}>{paymentInfo.label}</span>
                             </div>
                           </div>
+                            )
+                          })()}
 
                           {/* Order Items */}
                           <div className="space-y-2 mb-3">

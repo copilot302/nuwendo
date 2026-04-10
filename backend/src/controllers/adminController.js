@@ -1174,7 +1174,7 @@ const getShopOrderRecipientColumnSupport = async () => {
 // Get all shop orders for admin
 const getOrders = async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, payment_verified } = req.query;
+    const { page = 1, limit = 20, status, payment_verified, include_pending = 'true' } = req.query;
     const offset = (page - 1) * limit;
 
     let whereConditions = [];
@@ -1189,6 +1189,11 @@ const getOrders = async (req, res) => {
     if (payment_verified !== undefined) {
       whereConditions.push(`so.payment_verified = $${paramIndex++}`);
       queryParams.push(payment_verified === 'true');
+    }
+
+    if (include_pending === 'false') {
+      whereConditions.push(`so.status <> $${paramIndex++}`);
+      queryParams.push('pending');
     }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
