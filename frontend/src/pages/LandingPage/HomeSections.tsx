@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Building2, HeartPulse, MessagesSquare, Monitor, Percent, UsersRound } from 'lucide-react'
+import { ArrowRight, Building2, HeartPulse, MessagesSquare, Monitor, Percent, Quote, UsersRound } from 'lucide-react'
 
 const serviceCards = [
   {
@@ -39,16 +38,6 @@ const rotatingLines = [
 ]
 
 export function HomeSections() {
-  const [currentLine, setCurrentLine] = useState(0)
-
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setCurrentLine((prev) => (prev + 1) % rotatingLines.length)
-    }, 2600)
-
-    return () => window.clearInterval(timer)
-  }, [])
-
   return (
     <>
       <section className="bg-white py-20">
@@ -160,41 +149,22 @@ export function HomeSections() {
         </div>
       </section>
 
-      <section className="py-16 bg-slate-50 border-y border-slate-200">
+  <section className="py-16 bg-slate-50">
         <div className="container">
-          <div className="max-w-5xl mx-auto text-center">
-            <p className="inline-block bg-brand text-white text-xs md:text-sm uppercase tracking-[0.16em] px-4 py-1 font-semibold">
-              Why Patients Choose Nuwendo
-            </p>
-            <blockquote className="mt-6 text-3xl md:text-5xl font-medium italic uppercase leading-tight text-brand-800">
+          <div className="max-w-6xl mx-auto rounded-3xl bg-gradient-to-r from-[#173c50] via-[#133649] to-[#173c50] px-6 py-12 md:px-12 md:py-16 text-center shadow-xl">
+            <div className="flex justify-center">
+              <Quote className="h-14 w-14 md:h-16 md:w-16 text-brand-100/85 stroke-[2.5]" aria-hidden="true" />
+            </div>
+
+            <blockquote className="mt-5 text-2xl md:text-[2.1rem] text-white/95 italic leading-[1.35] max-w-4xl mx-auto">
               “I struggled for years, but with Nuwendo’s doctor-led plan I finally found what works for my body. I’m losing
               weight safely, my energy is up, and I feel supported every step.”
             </blockquote>
-          </div>
-        </div>
-      </section>
 
-      <section className="py-24 bg-slate-50">
-        <div className="container">
-          <div className="max-w-6xl mx-auto text-center">
-            <p className="text-brand font-semibold uppercase tracking-[0.22em]">Doctor-Led Results</p>
-            <h3 className="mt-3 text-4xl md:text-7xl font-black uppercase text-brand-800 leading-[0.95]">
-              Experience a different way to lose weight
-            </h3>
-            <p className="mt-5 text-xl md:text-2xl text-slate-600">We work with your biology. That makes all the difference.</p>
-
-            <div className="mt-12 rounded-3xl border border-brand-200 bg-gradient-to-r from-brand-900 via-brand-800 to-brand p-8 md:p-12 overflow-hidden shadow-xl">
-              <motion.p
-                key={currentLine}
-                initial={{ opacity: 0, y: 18, scale: 0.96 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -18 }}
-                transition={{ duration: 0.45 }}
-                className="text-3xl md:text-5xl font-extrabold text-white uppercase italic tracking-wide leading-tight"
-              >
-                {rotatingLines[currentLine]}
-              </motion.p>
-            </div>
+            <div className="mx-auto mt-8 h-1 w-16 rounded-full bg-brand-100/70" />
+            <p className="mt-6 text-xs md:text-sm uppercase tracking-[0.18em] text-brand-100/85 font-medium">
+              Why Patients Choose Nuwendo
+            </p>
           </div>
         </div>
       </section>
@@ -203,35 +173,25 @@ export function HomeSections() {
         <div className="container">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">
-              <p className="inline-block bg-brand text-white text-sm md:text-base uppercase tracking-[0.16em] px-5 py-1.5 font-semibold">
-                What Makes Nuwendo Different?
+              <p className="text-brand-700 font-semibold uppercase tracking-[0.16em] text-sm md:text-base">
+                DOCTOR-LED RESULTS
               </p>
-              <h3 className="mt-6 text-4xl md:text-8xl font-black uppercase italic leading-[0.9] text-brand-800">
-                What makes doctor-led weight loss different?
+              <h3 className="mt-4 text-4xl md:text-6xl font-black uppercase italic leading-[0.95] text-brand-800">
+                What Makes Nuwendo Different?
               </h3>
-              <p className="mt-8 text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-                While there are many ways to lose weight, Nuwendo focuses on what matters most: your biology, your health,
+              <p className="mt-6 text-xl md:text-2xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+                While there are many ways to lose weight, Nuwendo focuses on what matters most your biology, your health,
                 and your long-term success.
               </p>
             </div>
 
-            <div className="h-2 bg-brand-800 w-full rounded-full my-14" />
-
-            <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
-              <p className="text-2xl md:text-3xl text-brand-800 font-medium">Curious about Nuwendo?</p>
-              <Link to="/signup" className="text-brand font-semibold text-2xl md:text-3xl hover:underline inline-flex items-center gap-2">
-                Send a Message Now
-                <ArrowRight className="h-5 w-5" />
-              </Link>
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-6">
-              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300">
+            <div className="mt-12 grid lg:grid-cols-3 gap-6">
+              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
                 <UsersRound className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800">
+                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[10.5rem]">
                   Doctor-Led Care For Everyone
                 </h4>
-                <p className="text-slate-700 mt-6 text-xl leading-relaxed">
+                <p className="text-slate-700 mt-6 text-xl leading-relaxed flex-1">
                   Whether you’re managing obesity, PCOS, thyroid issues, or just seeking safe weight loss, our programs are
                   guided by licensed doctors.
                 </p>
@@ -240,12 +200,12 @@ export function HomeSections() {
                 </Link>
               </div>
 
-              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
                 <Percent className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800">
+                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[10.5rem]">
                   Structured Programs & Packages
                 </h4>
-                <p className="text-slate-700 mt-6 text-xl leading-relaxed">
+                <p className="text-slate-700 mt-6 text-xl leading-relaxed flex-1">
                   Choose from our Initial Consultation or Starter Package, designed for different needs and goals, with
                   bundled savings.
                 </p>
@@ -254,12 +214,12 @@ export function HomeSections() {
                 </Link>
               </div>
 
-              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300">
+              <div className="bg-white p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
                 <HeartPulse className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800">
+                <h4 className="text-4xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[10.5rem]">
                   Focus On Long-Term Health
                 </h4>
-                <p className="text-slate-700 mt-6 text-xl leading-relaxed">
+                <p className="text-slate-700 mt-6 text-xl leading-relaxed flex-1">
                   No quick fixes, just science-backed care to improve your metabolism, balance your hormones, and support
                   long-term health and wellness.
                 </p>
