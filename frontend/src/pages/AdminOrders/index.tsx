@@ -84,6 +84,20 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-800',
 }
 
+const isRejectedOrder = (order: Order) =>
+  order.status === 'cancelled' && !order.payment_verified
+
+const getOrderStatusBadge = (order: Order) => {
+  if (isRejectedOrder(order)) {
+    return { label: 'rejected', className: 'bg-red-100 text-red-800' }
+  }
+
+  return {
+    label: order.status,
+    className: statusColors[order.status] || 'bg-gray-100 text-gray-800'
+  }
+}
+
 export function AdminOrders() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState<Order[]>([])
@@ -91,7 +105,7 @@ export function AdminOrders() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [paymentFilter, setPaymentFilter] = useState<string>('true')
+  const [paymentFilter, setPaymentFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [receiptViewer, setReceiptViewer] = useState<ReceiptViewerState | null>(null)
@@ -305,14 +319,23 @@ export function AdminOrders() {
             orders.map((order) => (
               <Card key={order.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
+                  {/** derived label keeps rejected shop payments clear in Orders view */}
+                  {(() => {
+                    const statusBadge = getOrderStatusBadge(order)
+                    return (
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <h3 className="text-lg font-semibold text-gray-900">{formatOrderReference(order.id, order.created_at)}</h3>
-                        <Badge className={statusColors[order.status]}>
-                          {order.status}
+                        <Badge className={statusBadge.className}>
+                          {statusBadge.label}
                         </Badge>
-                        {order.payment_verified ? (
+                        {isRejectedOrder(order) ? (
+                          <Badge className="bg-red-100 text-red-800">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Payment Rejected
+                          </Badge>
+                        ) : order.payment_verified ? (
                           <Badge className="bg-green-100 text-green-800">
                             <CheckCircle className="w-3 h-3 mr-1" />
                             Payment Verified
@@ -364,6 +387,8 @@ export function AdminOrders() {
                       )}
                     </div>
                   </div>
+                    )
+                  })()}
                 </CardContent>
               </Card>
             ))
@@ -478,7 +503,12 @@ export function AdminOrders() {
                     <h3 className="text-sm font-semibold text-gray-900 mb-3">Payment Status</h3>
                     <div className="p-4 border rounded-lg">
                       <div className="flex items-center gap-2">
-                        {selectedOrder.payment_verified ? (
+                        {isRejectedOrder(selectedOrder) ? (
+                          <>
+                            <AlertCircle className="w-5 h-5 text-red-600" />
+                            <span className="font-medium text-red-800">Rejected</span>
+                          </>
+                        ) : selectedOrder.payment_verified ? (
                           <>
                             <CheckCircle className="w-5 h-5 text-green-600" />
                             <span className="font-medium text-green-800">Payment Verified</span>
