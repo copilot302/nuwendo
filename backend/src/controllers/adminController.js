@@ -125,12 +125,12 @@ const deleteService = async (req, res) => {
   }
 };
 
-const SCHEDULE_TYPES = ['online', 'on-site'];
+const CANONICAL_SCHEDULE_TYPE = 'on-site';
 
 // Get all time slots (now shared daily availability windows)
 const getTimeSlots = async (req, res) => {
   try {
-    // Use one canonical row per day (on-site), while data is mirrored for both types.
+    // Use one canonical row per day.
     let result = await pool.query(
       `SELECT aw.*, 
               au1.full_name as created_by_name,
@@ -138,8 +138,9 @@ const getTimeSlots = async (req, res) => {
        FROM availability_windows aw
        LEFT JOIN admin_users au1 ON aw.created_by = au1.id
        LEFT JOIN admin_users au2 ON aw.updated_by = au2.id
-       WHERE aw.appointment_type = 'on-site'
-       ORDER BY aw.day_of_week`
+       WHERE aw.appointment_type = $1
+       ORDER BY aw.day_of_week`,
+      [CANONICAL_SCHEDULE_TYPE]
     );
     
     // If no availability_windows, try working_hours for backward compatibility
@@ -151,8 +152,9 @@ const getTimeSlots = async (req, res) => {
          FROM working_hours wh
          LEFT JOIN admin_users au1 ON wh.created_by = au1.id
          LEFT JOIN admin_users au2 ON wh.updated_by = au2.id
-         WHERE wh.appointment_type = 'on-site'
-         ORDER BY wh.day_of_week`
+         WHERE wh.appointment_type = $1
+         ORDER BY wh.day_of_week`,
+        [CANONICAL_SCHEDULE_TYPE]
       );
     }
     
@@ -182,39 +184,37 @@ const createTimeSlot = async (req, res) => {
 
     await client.query('BEGIN');
 
-    for (const appointment_type of SCHEDULE_TYPES) {
-      await client.query(
-        `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, TRUE, $5, $5)
-         ON CONFLICT (day_of_week, appointment_type)
-         DO UPDATE SET
-           start_time = EXCLUDED.start_time,
-           end_time = EXCLUDED.end_time,
-           is_active = TRUE,
-           updated_by = EXCLUDED.updated_by,
-           updated_at = CURRENT_TIMESTAMP`,
-        [day_of_week, start_time, end_time, appointment_type, adminId]
-      );
+    await client.query(
+      `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, TRUE, $5, $5)
+       ON CONFLICT (day_of_week, appointment_type)
+       DO UPDATE SET
+         start_time = EXCLUDED.start_time,
+         end_time = EXCLUDED.end_time,
+         is_active = TRUE,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = CURRENT_TIMESTAMP`,
+      [day_of_week, start_time, end_time, CANONICAL_SCHEDULE_TYPE, adminId]
+    );
 
-      await client.query(
-        `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, 30, TRUE, $5, $5)
-         ON CONFLICT (day_of_week, appointment_type)
-         DO UPDATE SET
-           start_time = EXCLUDED.start_time,
-           end_time = EXCLUDED.end_time,
-           is_active = TRUE,
-           updated_by = EXCLUDED.updated_by,
-           updated_at = CURRENT_TIMESTAMP`,
-        [day_of_week, start_time, end_time, appointment_type, adminId]
-      );
-    }
+    await client.query(
+      `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, 30, TRUE, $5, $5)
+       ON CONFLICT (day_of_week, appointment_type)
+       DO UPDATE SET
+         start_time = EXCLUDED.start_time,
+         end_time = EXCLUDED.end_time,
+         is_active = TRUE,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = CURRENT_TIMESTAMP`,
+      [day_of_week, start_time, end_time, CANONICAL_SCHEDULE_TYPE, adminId]
+    );
 
     const result = await client.query(
       `SELECT * FROM availability_windows
-       WHERE day_of_week = $1 AND appointment_type = 'on-site'
+       WHERE day_of_week = $1 AND appointment_type = $2
        LIMIT 1`,
-      [day_of_week]
+      [day_of_week, CANONICAL_SCHEDULE_TYPE]
     );
 
     await client.query('COMMIT');
@@ -279,48 +279,46 @@ const updateTimeSlot = async (req, res) => {
 
     if (existing.day_of_week !== nextDay) {
       await client.query(
-        `DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])`,
-        [existing.day_of_week, SCHEDULE_TYPES]
+        `DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = $2`,
+        [existing.day_of_week, CANONICAL_SCHEDULE_TYPE]
       );
       await client.query(
-        `DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])`,
-        [existing.day_of_week, SCHEDULE_TYPES]
+        `DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = $2`,
+        [existing.day_of_week, CANONICAL_SCHEDULE_TYPE]
       );
     }
 
-    for (const appointment_type of SCHEDULE_TYPES) {
-      await client.query(
-        `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $6)
-         ON CONFLICT (day_of_week, appointment_type)
-         DO UPDATE SET
-           start_time = EXCLUDED.start_time,
-           end_time = EXCLUDED.end_time,
-           is_active = EXCLUDED.is_active,
-           updated_by = EXCLUDED.updated_by,
-           updated_at = CURRENT_TIMESTAMP`,
-        [nextDay, nextStart, nextEnd, appointment_type, nextIsActive, adminId]
-      );
+    await client.query(
+      `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $6)
+       ON CONFLICT (day_of_week, appointment_type)
+       DO UPDATE SET
+         start_time = EXCLUDED.start_time,
+         end_time = EXCLUDED.end_time,
+         is_active = EXCLUDED.is_active,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = CURRENT_TIMESTAMP`,
+      [nextDay, nextStart, nextEnd, CANONICAL_SCHEDULE_TYPE, nextIsActive, adminId]
+    );
 
-      await client.query(
-        `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, 30, $5, $6, $6)
-         ON CONFLICT (day_of_week, appointment_type)
-         DO UPDATE SET
-           start_time = EXCLUDED.start_time,
-           end_time = EXCLUDED.end_time,
-           is_active = EXCLUDED.is_active,
-           updated_by = EXCLUDED.updated_by,
-           updated_at = CURRENT_TIMESTAMP`,
-        [nextDay, nextStart, nextEnd, appointment_type, nextIsActive, adminId]
-      );
-    }
+    await client.query(
+      `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
+       VALUES ($1, $2, $3, $4, 30, $5, $6, $6)
+       ON CONFLICT (day_of_week, appointment_type)
+       DO UPDATE SET
+         start_time = EXCLUDED.start_time,
+         end_time = EXCLUDED.end_time,
+         is_active = EXCLUDED.is_active,
+         updated_by = EXCLUDED.updated_by,
+         updated_at = CURRENT_TIMESTAMP`,
+      [nextDay, nextStart, nextEnd, CANONICAL_SCHEDULE_TYPE, nextIsActive, adminId]
+    );
 
     const result = await client.query(
       `SELECT * FROM availability_windows
-       WHERE day_of_week = $1 AND appointment_type = 'on-site'
+       WHERE day_of_week = $1 AND appointment_type = $2
        LIMIT 1`,
-      [nextDay]
+      [nextDay, CANONICAL_SCHEDULE_TYPE]
     );
 
     await client.query('COMMIT');
@@ -344,7 +342,7 @@ const deleteTimeSlot = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Resolve window first so we can remove both mirrored types for that day.
+    // Resolve window first so we can remove the canonical schedule row for that day.
     let result = await pool.query(
       'SELECT day_of_week FROM availability_windows WHERE id = $1',
       [id]
@@ -362,13 +360,13 @@ const deleteTimeSlot = async (req, res) => {
     }
 
     await pool.query(
-      'DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])',
-      [result.rows[0].day_of_week, SCHEDULE_TYPES]
+      'DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = $2',
+      [result.rows[0].day_of_week, CANONICAL_SCHEDULE_TYPE]
     );
 
     await pool.query(
-      'DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])',
-      [result.rows[0].day_of_week, SCHEDULE_TYPES]
+      'DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = $2',
+      [result.rows[0].day_of_week, CANONICAL_SCHEDULE_TYPE]
     );
 
     res.json({

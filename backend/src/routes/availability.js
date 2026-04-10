@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 
 const router = express.Router();
+const CANONICAL_SCHEDULE_TYPE = 'on-site';
 
 /**
  * Get which appointment types have working hours configured for a specific date.
@@ -18,20 +19,30 @@ router.get('/types', async (req, res) => {
     const requestedDate = new Date(date);
     const dayOfWeek = requestedDate.getDay();
 
-    // Availability is now shared; if a day has active schedule, both types are selectable as preference.
-    let result = await pool.query(
+    // Use availability_windows as source of truth when it has canonical schedule data.
+    const availabilityWindowsDataResult = await pool.query(
       `SELECT COUNT(*)::int AS total
        FROM availability_windows
-       WHERE day_of_week = $1 AND is_active = true`,
-      [dayOfWeek]
+       WHERE appointment_type = $1`,
+      [CANONICAL_SCHEDULE_TYPE]
     );
+    const hasAvailabilityWindowsData = availabilityWindowsDataResult.rows[0].total > 0;
 
-    if (result.rows[0].total === 0) {
+    // Availability is now shared; if a day has active schedule, both types are selectable as preference.
+    let result;
+    if (hasAvailabilityWindowsData) {
+      result = await pool.query(
+        `SELECT COUNT(*)::int AS total
+         FROM availability_windows
+         WHERE day_of_week = $1 AND is_active = true AND appointment_type = $2`,
+        [dayOfWeek, CANONICAL_SCHEDULE_TYPE]
+      );
+    } else {
       result = await pool.query(
         `SELECT COUNT(*)::int AS total
          FROM working_hours
-         WHERE day_of_week = $1 AND is_active = true`,
-        [dayOfWeek]
+         WHERE day_of_week = $1 AND is_active = true AND appointment_type = $2`,
+        [dayOfWeek, CANONICAL_SCHEDULE_TYPE]
       );
     }
 
@@ -122,25 +133,36 @@ router.get('/', async (req, res) => {
     
     // Get day of week (0 = Sunday, 6 = Saturday)
     const dayOfWeek = requestedDate.getDay();
+
+    // Use availability_windows as source of truth when it has canonical schedule data.
+    const availabilityWindowsDataResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM availability_windows
+       WHERE appointment_type = $1`,
+      [CANONICAL_SCHEDULE_TYPE]
+    );
+    const hasAvailabilityWindowsData = availabilityWindowsDataResult.rows[0].total > 0;
     
     // Step 1: Get availability window for this day
     // First try new availability_windows table, fallback to working_hours
-    let availabilityResult = await pool.query(
-      `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
-       FROM availability_windows 
-       WHERE day_of_week = $1 
-       AND is_active = true`,
-      [dayOfWeek]
-    );
-    
-    // Fallback to working_hours if availability_windows is empty
-    if (!availabilityResult.rows[0]?.start_time || !availabilityResult.rows[0]?.end_time) {
+    let availabilityResult;
+    if (hasAvailabilityWindowsData) {
+      availabilityResult = await pool.query(
+        `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
+         FROM availability_windows 
+         WHERE day_of_week = $1 
+         AND is_active = true
+         AND appointment_type = $2`,
+        [dayOfWeek, CANONICAL_SCHEDULE_TYPE]
+      );
+    } else {
       availabilityResult = await pool.query(
         `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
          FROM working_hours 
          WHERE day_of_week = $1 
-         AND is_active = true`,
-        [dayOfWeek]
+         AND is_active = true
+         AND appointment_type = $2`,
+        [dayOfWeek, CANONICAL_SCHEDULE_TYPE]
       );
     }
     
