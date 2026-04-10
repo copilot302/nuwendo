@@ -19,8 +19,6 @@ import {
   Save,
   ToggleLeft,
   ToggleRight,
-  Monitor,
-  Building2,
   Info,
   Loader2,
   Settings
@@ -35,7 +33,6 @@ interface AvailabilityWindow {
   day_of_week: number
   start_time: string
   end_time: string
-  appointment_type: 'online' | 'on-site'
   is_active: boolean
   created_at: string
   updated_at: string | null
@@ -54,7 +51,6 @@ export function AdminSchedule() {
     day_of_week: 1,
     start_time: '07:30',
     end_time: '17:30',
-    appointment_type: 'online' as 'online' | 'on-site',
     is_active: true
   })
   
@@ -176,15 +172,6 @@ export function AdminSchedule() {
       return
     }
 
-    // Check if this day already has a different appointment type (only when creating new)
-    if (!editingWindow) {
-      const existingType = getDayAppointmentType(formData.day_of_week)
-      if (existingType && existingType !== formData.appointment_type) {
-        setError(`This day is already set to ${existingType}. Each day can only have one appointment type. Please delete the existing schedule first.`)
-        return
-      }
-    }
-
     try {
       const token = localStorage.getItem('adminToken')
       const url = editingWindow 
@@ -273,7 +260,6 @@ export function AdminSchedule() {
       day_of_week: 1,
       start_time: '07:30',
       end_time: '17:30',
-      appointment_type: 'online',
       is_active: true
     })
     setEditingWindow(null)
@@ -285,7 +271,6 @@ export function AdminSchedule() {
       day_of_week: window.day_of_week,
       start_time: window.start_time,
       end_time: window.end_time,
-      appointment_type: window.appointment_type,
       is_active: window.is_active
     })
     setEditingWindow(window)
@@ -312,12 +297,6 @@ export function AdminSchedule() {
     const hours = Math.floor(durationMinutes / 60)
     const mins = durationMinutes % 60
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`
-  }
-
-  // Get the appointment type for a specific day
-  const getDayAppointmentType = (dayIndex: number): 'online' | 'on-site' | null => {
-    const dayWindows = windowsByDay[dayIndex]?.find((w: AvailabilityWindow) => w.is_active)
-    return dayWindows?.appointment_type || null
   }
 
   // Group availability windows by day
@@ -377,7 +356,7 @@ export function AdminSchedule() {
           <Info className="h-5 w-5 text-blue-600 mt-0.5" />
           <div className="text-sm text-blue-900">
             <p className="font-medium">How it works:</p>
-            <p>Set your available hours for each day. The system dynamically calculates available slots based on service duration and existing bookings. Each day can only have one appointment type (online or on-site).</p>
+            <p>Set your available hours for each day. The system dynamically calculates available slots based on service duration and existing bookings.</p>
           </div>
         </div>
 
@@ -434,49 +413,6 @@ export function AdminSchedule() {
                 </div>
               </div>
 
-              <div>
-                <Label className="block mb-2">Appointment Type *</Label>
-                {getDayAppointmentType(formData.day_of_week) && getDayAppointmentType(formData.day_of_week) !== formData.appointment_type && !editingWindow && (
-                  <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900 flex items-start gap-2">
-                    <Info className="h-4 w-4 mt-0.5" />
-                    <span>This day is already set to <strong>{getDayAppointmentType(formData.day_of_week)}</strong>. Each day can only have one appointment type.</span>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => setFormData({...formData, appointment_type: 'online'})}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      formData.appointment_type === 'online'
-                        ? 'border-brand bg-brand-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Monitor className={`h-5 w-5 ${formData.appointment_type === 'online' ? 'text-brand' : 'text-gray-400'}`} />
-                      <span className="font-medium">Online Only</span>
-                    </div>
-                    <p className="text-xs text-gray-600">For virtual consultations</p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormData({...formData, appointment_type: 'on-site'})}
-                    className={`p-4 border-2 rounded-lg transition-all ${
-                      formData.appointment_type === 'on-site'
-                        ? 'border-brand bg-brand-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <Building2 className={`h-5 w-5 ${formData.appointment_type === 'on-site' ? 'text-brand' : 'text-gray-400'}`} />
-                      <span className="font-medium">On-Site Only</span>
-                    </div>
-                    <p className="text-xs text-gray-600">For in-person appointments</p>
-                  </button>
-                </div>
-              </div>
-
               <div className="flex justify-end gap-3">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
@@ -515,17 +451,6 @@ export function AdminSchedule() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          {window.appointment_type === 'online' ? (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              <Monitor className="h-3 w-3 mr-1" />
-                              Online
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <Building2 className="h-3 w-3 mr-1" />
-                              On-Site
-                            </Badge>
-                          )}
                           <Badge variant="outline" className={window.is_active ? 'bg-green-50 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}>
                             {window.is_active ? 'Active' : 'Inactive'}
                           </Badge>

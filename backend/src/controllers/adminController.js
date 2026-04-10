@@ -125,10 +125,12 @@ const deleteService = async (req, res) => {
   }
 };
 
-// Get all time slots (now availability windows)
+const SCHEDULE_TYPES = ['online', 'on-site'];
+
+// Get all time slots (now shared daily availability windows)
 const getTimeSlots = async (req, res) => {
   try {
-    // Try availability_windows first, fallback to working_hours
+    // Use one canonical row per day (on-site), while data is mirrored for both types.
     let result = await pool.query(
       `SELECT aw.*, 
               au1.full_name as created_by_name,
@@ -136,7 +138,8 @@ const getTimeSlots = async (req, res) => {
        FROM availability_windows aw
        LEFT JOIN admin_users au1 ON aw.created_by = au1.id
        LEFT JOIN admin_users au2 ON aw.updated_by = au2.id
-       ORDER BY aw.day_of_week, aw.appointment_type`
+       WHERE aw.appointment_type = 'on-site'
+       ORDER BY aw.day_of_week`
     );
     
     // If no availability_windows, try working_hours for backward compatibility
@@ -148,7 +151,8 @@ const getTimeSlots = async (req, res) => {
          FROM working_hours wh
          LEFT JOIN admin_users au1 ON wh.created_by = au1.id
          LEFT JOIN admin_users au2 ON wh.updated_by = au2.id
-         ORDER BY wh.day_of_week, wh.appointment_type`
+         WHERE wh.appointment_type = 'on-site'
+         ORDER BY wh.day_of_week`
       );
     }
     
@@ -164,16 +168,10 @@ const getTimeSlots = async (req, res) => {
 
 // Create or update availability window for a day
 const createTimeSlot = async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { day_of_week, start_time, end_time, appointment_type } = req.body;
+    const { day_of_week, start_time, end_time } = req.body;
     const adminId = req.admin.adminId;
-
-    // Validate that appointment_type is required
-    if (!appointment_type || !['online', 'on-site'].includes(appointment_type)) {
-      return res.status(400).json({ 
-        message: 'Appointment type is required and must be either "online" or "on-site"' 
-      });
-    }
 
     // Validate times
     if (start_time >= end_time) {
@@ -182,70 +180,44 @@ const createTimeSlot = async (req, res) => {
       });
     }
 
-    // Check if a different appointment type already exists for this day
-    const existingDifferentType = await pool.query(
-      `SELECT id, appointment_type FROM availability_windows 
-       WHERE day_of_week = $1 
-       AND appointment_type != $2
-       AND is_active = true`,
-      [day_of_week, appointment_type]
-    );
+    await client.query('BEGIN');
 
-    if (existingDifferentType.rows.length > 0) {
-      return res.status(400).json({ 
-        message: `This day already has ${existingDifferentType.rows[0].appointment_type} appointments. Each day can only have one appointment type.` 
-      });
-    }
-
-    // Check if availability window already exists for this day/type combination
-    const existingResult = await pool.query(
-      `SELECT id FROM availability_windows 
-       WHERE day_of_week = $1 
-       AND appointment_type = $2`,
-      [day_of_week, appointment_type]
-    );
-
-    let result;
-    if (existingResult.rows.length > 0) {
-      // Update existing availability window
-      result = await pool.query(
-        `UPDATE availability_windows 
-         SET start_time = $1, end_time = $2, 
-             updated_by = $3, updated_at = CURRENT_TIMESTAMP, is_active = TRUE
-         WHERE day_of_week = $4 AND appointment_type = $5
-         RETURNING *`,
-        [start_time, end_time, adminId, day_of_week, appointment_type]
+    for (const appointment_type of SCHEDULE_TYPES) {
+      await client.query(
+        `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, TRUE, $5, $5)
+         ON CONFLICT (day_of_week, appointment_type)
+         DO UPDATE SET
+           start_time = EXCLUDED.start_time,
+           end_time = EXCLUDED.end_time,
+           is_active = TRUE,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = CURRENT_TIMESTAMP`,
+        [day_of_week, start_time, end_time, appointment_type, adminId]
       );
-    } else {
-      // Create new availability window
-      result = await pool.query(
-        `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, $5, $5)
-         RETURNING *`,
+
+      await client.query(
+        `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, 30, TRUE, $5, $5)
+         ON CONFLICT (day_of_week, appointment_type)
+         DO UPDATE SET
+           start_time = EXCLUDED.start_time,
+           end_time = EXCLUDED.end_time,
+           is_active = TRUE,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = CURRENT_TIMESTAMP`,
         [day_of_week, start_time, end_time, appointment_type, adminId]
       );
     }
 
-    // Also sync to working_hours for backward compatibility
-    const existingWH = await pool.query(
-      `SELECT id FROM working_hours WHERE day_of_week = $1 AND appointment_type = $2`,
-      [day_of_week, appointment_type]
+    const result = await client.query(
+      `SELECT * FROM availability_windows
+       WHERE day_of_week = $1 AND appointment_type = 'on-site'
+       LIMIT 1`,
+      [day_of_week]
     );
-    
-    if (existingWH.rows.length > 0) {
-      await pool.query(
-        `UPDATE working_hours SET start_time = $1, end_time = $2, updated_by = $3, updated_at = CURRENT_TIMESTAMP, is_active = TRUE
-         WHERE day_of_week = $4 AND appointment_type = $5`,
-        [start_time, end_time, adminId, day_of_week, appointment_type]
-      );
-    } else {
-      await pool.query(
-        `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, created_by, updated_by)
-         VALUES ($1, $2, $3, $4, 30, $5, $5)
-         ON CONFLICT (day_of_week, appointment_type) DO UPDATE SET start_time = $2, end_time = $3, is_active = TRUE`,
-        [day_of_week, start_time, end_time, appointment_type, adminId]
-      );
-    }
+
+    await client.query('COMMIT');
 
     res.status(201).json({
       success: true,
@@ -253,24 +225,21 @@ const createTimeSlot = async (req, res) => {
       timeSlot: result.rows[0]
     });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Create availability window error:', error);
     res.status(500).json({ message: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 
 // Update availability window
 const updateTimeSlot = async (req, res) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
-    const { day_of_week, start_time, end_time, appointment_type, is_active } = req.body;
+    const { day_of_week, start_time, end_time, is_active } = req.body;
     const adminId = req.admin.adminId;
-
-    // Validate appointment_type if provided
-    if (appointment_type && !['online', 'on-site'].includes(appointment_type)) {
-      return res.status(400).json({ 
-        message: 'Appointment type must be either "online" or "on-site"' 
-      });
-    }
 
     // Validate times
     if (start_time && end_time && start_time >= end_time) {
@@ -279,55 +248,94 @@ const updateTimeSlot = async (req, res) => {
       });
     }
 
-    const result = await pool.query(
-      `UPDATE availability_windows 
-       SET day_of_week = COALESCE($1, day_of_week), 
-           start_time = COALESCE($2, start_time), 
-           end_time = COALESCE($3, end_time), 
-           appointment_type = COALESCE($4, appointment_type), 
-           is_active = COALESCE($5, is_active), 
-           updated_by = $6,
-           updated_at = CURRENT_TIMESTAMP
-       WHERE id = $7
-       RETURNING *`,
-      [day_of_week, start_time, end_time, appointment_type, is_active, adminId, id]
+    await client.query('BEGIN');
+
+    let existingResult = await client.query(
+      `SELECT day_of_week, start_time, end_time, is_active
+       FROM availability_windows
+       WHERE id = $1`,
+      [id]
     );
 
-    if (result.rows.length === 0) {
-      // Try working_hours for backward compatibility
-      const whResult = await pool.query(
-        `UPDATE working_hours 
-         SET day_of_week = COALESCE($1, day_of_week), 
-             start_time = COALESCE($2, start_time), 
-             end_time = COALESCE($3, end_time), 
-             appointment_type = COALESCE($4, appointment_type), 
-             is_active = COALESCE($5, is_active), 
-             updated_by = $6,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE id = $7
-         RETURNING *`,
-        [day_of_week, start_time, end_time, appointment_type, is_active, adminId, id]
+    if (existingResult.rows.length === 0) {
+      existingResult = await client.query(
+        `SELECT day_of_week, start_time, end_time, is_active
+         FROM working_hours
+         WHERE id = $1`,
+        [id]
       );
-      
-      if (whResult.rows.length === 0) {
-        return res.status(404).json({ message: 'Availability window not found' });
-      }
-      
-      return res.json({
-        success: true,
-        message: 'Availability window updated successfully',
-        timeSlot: whResult.rows[0]
-      });
     }
+
+    if (existingResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ message: 'Availability window not found' });
+    }
+
+    const existing = existingResult.rows[0];
+    const nextDay = day_of_week ?? existing.day_of_week;
+    const nextStart = start_time ?? existing.start_time;
+    const nextEnd = end_time ?? existing.end_time;
+    const nextIsActive = is_active ?? existing.is_active;
+
+    if (existing.day_of_week !== nextDay) {
+      await client.query(
+        `DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])`,
+        [existing.day_of_week, SCHEDULE_TYPES]
+      );
+      await client.query(
+        `DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])`,
+        [existing.day_of_week, SCHEDULE_TYPES]
+      );
+    }
+
+    for (const appointment_type of SCHEDULE_TYPES) {
+      await client.query(
+        `INSERT INTO availability_windows (day_of_week, start_time, end_time, appointment_type, is_active, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $6)
+         ON CONFLICT (day_of_week, appointment_type)
+         DO UPDATE SET
+           start_time = EXCLUDED.start_time,
+           end_time = EXCLUDED.end_time,
+           is_active = EXCLUDED.is_active,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = CURRENT_TIMESTAMP`,
+        [nextDay, nextStart, nextEnd, appointment_type, nextIsActive, adminId]
+      );
+
+      await client.query(
+        `INSERT INTO working_hours (day_of_week, start_time, end_time, appointment_type, slot_interval_minutes, is_active, created_by, updated_by)
+         VALUES ($1, $2, $3, $4, 30, $5, $6, $6)
+         ON CONFLICT (day_of_week, appointment_type)
+         DO UPDATE SET
+           start_time = EXCLUDED.start_time,
+           end_time = EXCLUDED.end_time,
+           is_active = EXCLUDED.is_active,
+           updated_by = EXCLUDED.updated_by,
+           updated_at = CURRENT_TIMESTAMP`,
+        [nextDay, nextStart, nextEnd, appointment_type, nextIsActive, adminId]
+      );
+    }
+
+    const result = await client.query(
+      `SELECT * FROM availability_windows
+       WHERE day_of_week = $1 AND appointment_type = 'on-site'
+       LIMIT 1`,
+      [nextDay]
+    );
+
+    await client.query('COMMIT');
 
     res.json({
       success: true,
       message: 'Availability window updated successfully',
-      timeSlot: result.rows[0]
+      timeSlot: result.rows[0] || null
     });
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Update availability window error:', error);
     res.status(500).json({ message: 'Server error' });
+  } finally {
+    client.release();
   }
 };
 
@@ -336,22 +344,15 @@ const deleteTimeSlot = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Try availability_windows first
+    // Resolve window first so we can remove both mirrored types for that day.
     let result = await pool.query(
-      'DELETE FROM availability_windows WHERE id = $1 RETURNING *',
+      'SELECT day_of_week FROM availability_windows WHERE id = $1',
       [id]
     );
 
-    // Also delete from working_hours if exists (for backward compatibility)
-    if (result.rows.length > 0) {
-      await pool.query(
-        'DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = $2',
-        [result.rows[0].day_of_week, result.rows[0].appointment_type]
-      );
-    } else {
-      // Try working_hours if not found in availability_windows
+    if (result.rows.length === 0) {
       result = await pool.query(
-        'DELETE FROM working_hours WHERE id = $1 RETURNING *',
+        'SELECT day_of_week FROM working_hours WHERE id = $1',
         [id]
       );
     }
@@ -359,6 +360,16 @@ const deleteTimeSlot = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Availability window not found' });
     }
+
+    await pool.query(
+      'DELETE FROM availability_windows WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])',
+      [result.rows[0].day_of_week, SCHEDULE_TYPES]
+    );
+
+    await pool.query(
+      'DELETE FROM working_hours WHERE day_of_week = $1 AND appointment_type = ANY($2::text[])',
+      [result.rows[0].day_of_week, SCHEDULE_TYPES]
+    );
 
     res.json({
       success: true,

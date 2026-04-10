@@ -110,10 +110,9 @@ const createBooking = async (req, res) => {
        FROM bookings b
        JOIN services s ON b.service_id = s.id
        WHERE b.booking_date = $1 
-       AND b.appointment_type = $2
        AND b.status != 'cancelled'
        AND b.payment_receipt_url IS NOT NULL`,
-      [bookingDate, appointmentType]
+      [bookingDate]
     );
 
     const newStartMinutes = hours * 60 + minutes;

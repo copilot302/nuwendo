@@ -52,7 +52,7 @@ export default function ChooseSchedule() {
     }
   }, [appointmentType, isValidUser, navigate, serviceId])
 
-  // Fetch time slots based on selected date and chosen appointment type
+  // Fetch time slots based on selected date (appointment type is preference only)
   useEffect(() => {
     if (!selectedDate || !appointmentType || !serviceId) return
 
@@ -65,7 +65,7 @@ export default function ChooseSchedule() {
         const day = String(selectedDate.getDate()).padStart(2, '0')
         const dateStr = `${year}-${month}-${day}`
 
-    const response = await fetch(`${BASE_URL}/api/availability?date=${dateStr}&type=${appointmentType}&serviceId=${serviceId}`)
+  const response = await fetch(`${BASE_URL}/api/availability?date=${dateStr}&serviceId=${serviceId}`)
         const data = await response.json()
         setAvailableSlots(data.availableSlots || [])
         setSelectedSlot(null)
@@ -220,7 +220,7 @@ export default function ChooseSchedule() {
           <div className="mb-6">
             <div className="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 text-sm text-gray-700">
               {appointmentType === 'online' ? <Monitor className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
-              {appointmentType === 'online' ? 'Online appointment selected' : 'On-site appointment selected'}
+              {appointmentType === 'online' ? 'Preferred type: Online' : 'Preferred type: On-site'}
             </div>
           </div>
 

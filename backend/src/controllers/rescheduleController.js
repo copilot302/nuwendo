@@ -238,8 +238,6 @@ export const rescheduleBooking = async (req, res) => {
       });
     }
 
-    const appointmentType = booking.appointment_type;
-
     // ✅ CRITICAL: Check if the new time slot is available
     const conflictCheck = await client.query(
       `SELECT id, service_id, user_id, booking_date, booking_time 
@@ -261,34 +259,49 @@ export const rescheduleBooking = async (req, res) => {
       });
     }
 
-    // ✅ Check if the new time slot is within working hours
+    // ✅ Check if the new time slot is within configured schedule window
     const dayOfWeek = new Date(new_date).getDay();
-    
-    // Use the same appointment type from the booking (already validated above)
-    const workingHoursCheck = await client.query(
-      `SELECT start_time, end_time, slot_interval_minutes 
-       FROM working_hours 
-       WHERE day_of_week = $1 
-       AND appointment_type = $2
+
+    let workingHoursCheck = await client.query(
+      `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
+       FROM availability_windows
+       WHERE day_of_week = $1
        AND is_active = true`,
-      [dayOfWeek, appointmentType]
+      [dayOfWeek]
     );
 
-    if (workingHoursCheck.rows.length === 0) {
+    if (!workingHoursCheck.rows[0]?.start_time || !workingHoursCheck.rows[0]?.end_time) {
+      workingHoursCheck = await client.query(
+        `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
+         FROM working_hours
+         WHERE day_of_week = $1
+         AND is_active = true`,
+        [dayOfWeek]
+      );
+    }
+
+    if (!workingHoursCheck.rows[0]?.start_time || !workingHoursCheck.rows[0]?.end_time) {
       await client.query('ROLLBACK');
       return res.status(400).json({ 
         success: false, 
-        message: 'No working hours configured for this day and appointment type.',
+        message: 'No working hours configured for this day.',
         invalid_timeslot: true
       });
     }
 
     // Validate that the selected time is within working hours range
     const workingHours = workingHoursCheck.rows[0];
-    const selectedTime = new_time;
-    
+    const toMinutes = (timeValue) => {
+      const [h = '0', m = '0'] = String(timeValue).split(':');
+      return Number(h) * 60 + Number(m);
+    };
+
+    const selectedMinutes = toMinutes(new_time);
+    const workingStartMinutes = toMinutes(workingHours.start_time);
+    const workingEndMinutes = toMinutes(workingHours.end_time);
+
     // Check if selected time falls within working hours range
-    if (selectedTime < workingHours.start_time || selectedTime >= workingHours.end_time) {
+    if (selectedMinutes < workingStartMinutes || selectedMinutes >= workingEndMinutes) {
       await client.query('ROLLBACK');
       return res.status(400).json({ 
         success: false, 
@@ -456,7 +469,7 @@ export const checkReschedulePermission = async (req, res) => {
  */
 export const getAvailableTimeSlotsForReschedule = async (req, res) => {
   try {
-    const { date, appointment_type = 'on-site' } = req.query;
+    const { date } = req.query;
     
     if (!date) {
       return res.status(400).json({ 
@@ -468,17 +481,26 @@ export const getAvailableTimeSlotsForReschedule = async (req, res) => {
     const bookingDate = new Date(date);
     const dayOfWeek = bookingDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    // Get working hours for this day of week
-    const workingHoursResult = await pool.query(
-      `SELECT start_time, end_time, slot_interval_minutes 
-       FROM working_hours 
-       WHERE day_of_week = $1 
-       AND appointment_type = $2 
+    // Get schedule window for this day of week
+    let workingHoursResult = await pool.query(
+      `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time, 30 AS slot_interval_minutes
+       FROM availability_windows
+       WHERE day_of_week = $1
        AND is_active = true`,
-      [dayOfWeek, appointment_type]
+      [dayOfWeek]
     );
 
-    if (workingHoursResult.rows.length === 0) {
+    if (!workingHoursResult.rows[0]?.start_time || !workingHoursResult.rows[0]?.end_time) {
+      workingHoursResult = await pool.query(
+        `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time, COALESCE(MIN(slot_interval_minutes), 30) AS slot_interval_minutes
+         FROM working_hours
+         WHERE day_of_week = $1
+         AND is_active = true`,
+        [dayOfWeek]
+      );
+    }
+
+    if (!workingHoursResult.rows[0]?.start_time || !workingHoursResult.rows[0]?.end_time) {
       return res.json({
         success: true,
         date,

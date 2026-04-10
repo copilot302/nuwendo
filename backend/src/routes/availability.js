@@ -18,25 +18,30 @@ router.get('/types', async (req, res) => {
     const requestedDate = new Date(date);
     const dayOfWeek = requestedDate.getDay();
 
-    // Check which appointment types exist in working_hours (or availability_windows) for this day
-    const result = await pool.query(
-      `SELECT DISTINCT appointment_type FROM (
-        SELECT appointment_type FROM availability_windows
-        WHERE day_of_week = $1 AND is_active = true
-        UNION
-        SELECT appointment_type FROM working_hours
-        WHERE day_of_week = $1 AND is_active = true
-      ) AS combined`,
+    // Availability is now shared; if a day has active schedule, both types are selectable as preference.
+    let result = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM availability_windows
+       WHERE day_of_week = $1 AND is_active = true`,
       [dayOfWeek]
     );
 
-    const scheduledTypes = result.rows.map(r => r.appointment_type);
+    if (result.rows[0].total === 0) {
+      result = await pool.query(
+        `SELECT COUNT(*)::int AS total
+         FROM working_hours
+         WHERE day_of_week = $1 AND is_active = true`,
+        [dayOfWeek]
+      );
+    }
+
+    const hasSchedule = result.rows[0].total > 0;
 
     res.json({
       success: true,
       date,
       dayOfWeek,
-      availableTypes: scheduledTypes  // e.g. ['on-site'] or ['online', 'on-site'] or []
+      availableTypes: hasSchedule ? ['online', 'on-site'] : []
     });
   } catch (error) {
     console.error('Error fetching availability types:', error);
@@ -74,7 +79,7 @@ const normalizeTime = (time) => {
  */
 router.get('/', async (req, res) => {
   try {
-    const { date, type, serviceId } = req.query;
+    const { date, serviceId } = req.query;
     
     if (!date) {
       return res.status(400).json({
@@ -83,15 +88,6 @@ router.get('/', async (req, res) => {
       });
     }
 
-    // Validate appointment type (default to online now)
-    const appointmentType = type || 'online';
-    if (!['online', 'on-site'].includes(appointmentType)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid appointment type. Must be online or on-site'
-      });
-    }
-    
     // Get service duration (required for proper slot calculation)
     let serviceDuration = 30; // Default 30 minutes
     if (serviceId) {
@@ -127,36 +123,33 @@ router.get('/', async (req, res) => {
     // Get day of week (0 = Sunday, 6 = Saturday)
     const dayOfWeek = requestedDate.getDay();
     
-    // Step 1: Get availability window for this day and appointment type
+    // Step 1: Get availability window for this day
     // First try new availability_windows table, fallback to working_hours
     let availabilityResult = await pool.query(
-      `SELECT start_time, end_time 
+      `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
        FROM availability_windows 
        WHERE day_of_week = $1 
-       AND is_active = true 
-       AND appointment_type = $2`,
-      [dayOfWeek, appointmentType]
+       AND is_active = true`,
+      [dayOfWeek]
     );
     
     // Fallback to working_hours if availability_windows is empty
-    if (availabilityResult.rows.length === 0) {
+    if (!availabilityResult.rows[0]?.start_time || !availabilityResult.rows[0]?.end_time) {
       availabilityResult = await pool.query(
-        `SELECT start_time, end_time 
+        `SELECT MIN(start_time) AS start_time, MAX(end_time) AS end_time
          FROM working_hours 
          WHERE day_of_week = $1 
-         AND is_active = true 
-         AND appointment_type = $2`,
-        [dayOfWeek, appointmentType]
+         AND is_active = true`,
+        [dayOfWeek]
       );
     }
     
-    // If no availability defined for this day/type, return empty
-    if (availabilityResult.rows.length === 0) {
+    // If no availability defined for this day, return empty
+    if (!availabilityResult.rows[0]?.start_time || !availabilityResult.rows[0]?.end_time) {
       return res.json({
         success: true,
         date,
         dayOfWeek,
-        appointmentType,
         serviceDuration,
         availableSlots: []
       });
@@ -166,15 +159,14 @@ router.get('/', async (req, res) => {
     const windowStart = timeToMinutes(normalizeTime(availability.start_time));
     const windowEnd = timeToMinutes(normalizeTime(availability.end_time));
     
-    // Step 2: Get all existing bookings for this date and type
+    // Step 2: Get all existing bookings for this date
     const bookingsResult = await pool.query(
       `SELECT b.booking_time, b.end_time, s.duration_minutes
        FROM bookings b
        JOIN services s ON b.service_id = s.id
        WHERE b.booking_date = $1 
-       AND b.appointment_type = $2
        AND b.status NOT IN ('cancelled')`,
-      [date, appointmentType]
+      [date]
     );
     
     // Convert bookings to time ranges (in minutes)
@@ -247,7 +239,6 @@ router.get('/', async (req, res) => {
       success: true,
       date,
       dayOfWeek,
-      appointmentType,
       serviceDuration,
       availableSlots
     });
