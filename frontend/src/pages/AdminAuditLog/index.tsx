@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { 
   FileText, Search, ChevronLeft, ChevronRight, X,
-  Settings, Calendar, Clock, User, Edit, Trash2, Plus, Eye,
+  Settings, Clock, User, Edit, Trash2, Plus, Eye,
   CreditCard, CheckCircle, XCircle, RefreshCw, Loader2
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
@@ -166,16 +166,16 @@ export function AdminAuditLog() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Audit Logs</h1>
-            <p className="text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Audit Logs</h1>
+            <p className="text-sm sm:text-base text-gray-500">
               {pagination ? `${pagination.total_records} total events` : 'Loading...'}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => fetchLogs(pagination?.current_page || 1)}>
+          <Button variant="outline" size="sm" onClick={() => fetchLogs(pagination?.current_page || 1)} className="w-full sm:w-auto">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -194,35 +194,60 @@ export function AdminAuditLog() {
         {/* Filters */}
         <Card className="mb-6 border-0 shadow-md">
           <CardContent className="p-4">
-            <form onSubmit={handleSearch} className="flex flex-wrap gap-4">
-              <div className="relative flex-1 min-w-[200px]">
+            <form onSubmit={handleSearch} className="space-y-4 min-w-0">
+              <div>
+                <label htmlFor="audit-search" className="text-sm font-medium text-gray-700 mb-2 block">Search action</label>
+                <div className="relative w-full">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
+                  id="audit-search"
                   placeholder="Search by action..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-40"
-                  placeholder="From"
-                />
-                <span className="text-gray-400">to</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-40"
-                  placeholder="To"
-                />
               </div>
-              <Button type="submit" className="bg-brand hover:bg-brand-600">Filter</Button>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-end min-w-0">
+                <div>
+                  <label htmlFor="audit-date-from" className="text-sm font-medium text-gray-700 mb-2 block">From date</label>
+                  <Input
+                    id="audit-date-from"
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-full min-w-0"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="audit-date-to" className="text-sm font-medium text-gray-700 mb-2 block">To date</label>
+                  <Input
+                    id="audit-date-to"
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-full min-w-0"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button type="submit" className="w-full sm:w-auto bg-brand hover:bg-brand-600">Apply Filters</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => {
+                    setSearchQuery('')
+                    setDateFrom('')
+                    setDateTo('')
+                    fetchLogs(1)
+                  }}
+                >
+                  Reset
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -246,15 +271,15 @@ export function AdminAuditLog() {
                       key={log.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="flex items-start gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-start gap-3 sm:gap-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                       onClick={() => setSelectedLog(log)}
                     >
                       <div className={`p-2 rounded-lg ${actionColors[actionType] || 'bg-gray-100 text-gray-600'}`}>
                         {actionIcons[actionType] || <Settings className="h-4 w-4" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="font-medium text-gray-900 truncate">{log.action}</p>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <p className="font-medium text-gray-900 break-words">{log.action}</p>
                           {log.table_name && (
                             <Badge variant="outline" className="text-xs">
                               {log.table_name}
@@ -264,8 +289,8 @@ export function AdminAuditLog() {
                             <span className="text-xs text-gray-400">#{log.record_id}</span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                          <span className="flex items-center gap-1 break-words">
                             <User className="h-3 w-3" />
                             {log.admin_name || 'System'}
                           </span>
@@ -275,7 +300,7 @@ export function AdminAuditLog() {
                           </span>
                         </div>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="text-right shrink-0 hidden sm:block">
                         <p className="text-xs text-gray-400">{formatDateTime(log.created_at)}</p>
                       </div>
                     </motion.div>
@@ -293,11 +318,11 @@ export function AdminAuditLog() {
 
         {/* Pagination */}
         {pagination && pagination.total_pages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-600">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
+            <p className="text-xs sm:text-sm text-gray-600">
               Showing page {pagination.current_page} of {pagination.total_pages}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -325,20 +350,20 @@ export function AdminAuditLog() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-2 sm:p-4"
           onClick={() => setSelectedLog(null)}
         >
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-[calc(100vw-1rem)] sm:max-w-xl md:max-w-2xl max-h-[90vh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-gradient-to-r from-brand to-brand-600 p-6 text-white">
+            <div className="bg-gradient-to-r from-brand to-brand-600 p-4 sm:p-6 text-white">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-bold mb-1">{selectedLog.action}</h2>
-                  <p className="text-white/80">
+                  <h2 className="text-lg sm:text-xl font-bold mb-1 break-words">{selectedLog.action}</h2>
+                  <p className="text-xs sm:text-sm text-white/80 break-words">
                     {formatDateTime(selectedLog.created_at)} by {selectedLog.admin_name || 'System'}
                   </p>
                 </div>
@@ -347,11 +372,11 @@ export function AdminAuditLog() {
                 </button>
               </div>
             </div>
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-6 min-w-0">
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Table</p>
-                  <p className="font-medium">{selectedLog.table_name || 'N/A'}</p>
+                  <p className="font-medium break-words">{selectedLog.table_name || 'N/A'}</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Record ID</p>
@@ -359,11 +384,11 @@ export function AdminAuditLog() {
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Admin</p>
-                  <p className="font-medium">{selectedLog.admin_name || 'System'}</p>
+                  <p className="font-medium break-words">{selectedLog.admin_name || 'System'}</p>
                 </div>
                 <div className="p-3 bg-gray-50 rounded-xl">
                   <p className="text-xs text-gray-500 mb-1">Email</p>
-                  <p className="font-medium">{selectedLog.admin_email || 'N/A'}</p>
+                  <p className="font-medium break-all">{selectedLog.admin_email || 'N/A'}</p>
                 </div>
               </div>
 

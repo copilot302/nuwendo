@@ -205,11 +205,11 @@ export function AdminUsers() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-500">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h1>
+          <p className="text-sm sm:text-base text-gray-500">
             {pagination ? `${pagination.total_records} total users` : 'Loading...'}
           </p>
         </div>
@@ -227,7 +227,7 @@ export function AdminUsers() {
         {/* Search */}
         <Card className="mb-6 border-0 shadow-md">
           <CardContent className="p-4">
-            <form onSubmit={handleSearch} className="flex gap-4">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -237,7 +237,7 @@ export function AdminUsers() {
                   className="pl-10"
                 />
               </div>
-              <Button type="submit" className="bg-brand hover:bg-brand-600">Search</Button>
+              <Button type="submit" className="w-full sm:w-auto bg-brand hover:bg-brand-600">Search</Button>
             </form>
           </CardContent>
         </Card>
@@ -259,19 +259,19 @@ export function AdminUsers() {
                     key={user.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex items-center justify-between p-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => fetchPatientProfile(user.email)}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 w-full">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
                         <span className="text-brand font-semibold text-lg">
                           {user.first_name?.[0] || user.email[0].toUpperCase()}
                           {user.last_name?.[0] || ''}
                         </span>
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="font-medium text-gray-900">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                          <p className="font-medium text-gray-900 break-words">
                             {user.first_name && user.last_name 
                               ? `${user.first_name} ${user.last_name}` 
                               : user.email}
@@ -280,13 +280,13 @@ export function AdminUsers() {
                             {user.is_verified ? 'Verified' : 'Unverified'}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs sm:text-sm text-gray-500">
+                          <span className="flex items-center gap-1 break-all">
                             <Mail className="h-3 w-3" />
                             {user.email}
                           </span>
                           {user.phone_number && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 break-all">
                               <Phone className="h-3 w-3" />
                               {user.phone_number}
                             </span>
@@ -294,8 +294,8 @@ export function AdminUsers() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 w-full sm:w-auto">
+                      <div className="text-left sm:text-right">
                         <p className="text-sm font-medium text-gray-900">{user.booking_count} bookings</p>
                         <p className="text-xs text-gray-500">
                           Joined {formatDate(user.created_at)}
@@ -310,7 +310,7 @@ export function AdminUsers() {
                         variant="outline"
                         size="sm"
                         onClick={(e) => { e.stopPropagation(); setConfirmDeleteUser(user) }}
-                        className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400"
+                        className="text-red-600 border-red-300 hover:bg-red-50 hover:border-red-400 shrink-0"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -329,11 +329,11 @@ export function AdminUsers() {
 
         {/* Pagination */}
         {pagination && pagination.total_pages > 1 && (
-          <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-600">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
+            <p className="text-xs sm:text-sm text-gray-600">
               Showing page {pagination.current_page} of {pagination.total_pages}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -391,7 +391,7 @@ export function AdminUsers() {
               {error && (
                 <p className="text-sm text-red-600 mb-4">{error}</p>
               )}
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <Button
                   variant="outline"
                   onClick={() => { setConfirmDeleteUser(null); setError('') }}
@@ -430,7 +430,7 @@ export function AdminUsers() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden"
+              className="bg-white rounded-2xl shadow-xl w-[95vw] max-w-2xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {isLoadingPatient ? (
@@ -440,15 +440,15 @@ export function AdminUsers() {
                 </div>
               ) : selectedPatient && (
                 <>
-                  <div className="bg-gradient-to-r from-brand to-brand-600 p-6 text-white">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-4">
+                  <div className="bg-gradient-to-r from-brand to-brand-600 p-4 sm:p-6 text-white">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                         <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                           <User className="w-8 h-8" />
                         </div>
-                        <div>
-                          <h2 className="text-2xl font-bold">{selectedPatient.first_name} {selectedPatient.last_name}</h2>
-                          <p className="text-white/80">Patient since {formatDate(selectedPatient.created_at)}</p>
+                        <div className="min-w-0">
+                          <h2 className="text-xl sm:text-2xl font-bold break-words">{selectedPatient.first_name} {selectedPatient.last_name}</h2>
+                          <p className="text-xs sm:text-sm text-white/80">Patient since {formatDate(selectedPatient.created_at)}</p>
                         </div>
                       </div>
                       <button onClick={() => setSelectedPatient(null)} className="p-2 hover:bg-white/20 rounded-full transition-colors">
@@ -456,7 +456,7 @@ export function AdminUsers() {
                       </button>
                     </div>
                   </div>
-                  <div className="p-6 overflow-y-auto max-h-[60vh]">
+                  <div className="p-4 sm:p-6 overflow-y-auto max-h-[60vh]">
                     {(() => {
                       let details: { age?: string; height?: string; weight?: string; reasonForConsult?: string; healthGoals?: string[] } = {}
                       try { if (selectedPatient.medical_conditions) details = JSON.parse(selectedPatient.medical_conditions) } catch {}
@@ -489,11 +489,11 @@ export function AdminUsers() {
                               </div>
                             </div>
                           )}
-                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                          <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl min-w-0">
                             <Mail className="h-5 w-5 text-gray-400" />
                             <div>
                               <p className="text-xs text-gray-500">Email</p>
-                              <p className="font-medium text-sm">{selectedPatient.email}</p>
+                              <p className="font-medium text-sm break-all">{selectedPatient.email}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
@@ -540,7 +540,7 @@ export function AdminUsers() {
                           (() => {
                             const statusInfo = getBookingStatusInfo(b)
                             return (
-                          <div key={b.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                          <div key={b.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 bg-gray-50 rounded-xl">
                             <div>
                               <p className="font-medium text-sm">{b.service_name}</p>
                               <p className="text-xs text-gray-500">{formatDate(b.booking_date)} at {formatTime(b.booking_time)}</p>
@@ -551,7 +551,7 @@ export function AdminUsers() {
                                 <p className="text-xs text-blue-500 mt-1">Completed on {formatDate(b.completed_at)}</p>
                               )}
                             </div>
-                            <div className="text-right">
+                            <div className="text-left sm:text-right">
                               <Badge className={getStatusColor(statusInfo.key)}>{statusInfo.label}</Badge>
                               <p className="text-xs text-gray-500 mt-1">{formatPrice(b.amount_paid)}</p>
                             </div>
