@@ -180,9 +180,9 @@ function CalendarView({ bookings, onDateClick, onBookingClick }: CalendarViewPro
   };
   
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
+    <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-2xl font-bold text-gray-900">
           {monthNames[month]} {year}
         </h2>
         <div className="flex gap-2">
@@ -195,18 +195,20 @@ function CalendarView({ bookings, onDateClick, onBookingClick }: CalendarViewPro
         </div>
       </div>
       
-      <div className="grid grid-cols-7 gap-2">
-        {dayNames.map(day => (
-          <div key={day} className="text-center font-semibold text-gray-600 py-2">
-            {day}
-          </div>
-        ))}
-        
-        {Array.from({ length: startingDayOfWeek }).map((_, index) => (
-          <div key={`empty-${index}`} className="aspect-square" />
-        ))}
-        
-        {Array.from({ length: daysInMonth }).map((_, index) => {
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="min-w-[640px]">
+          <div className="grid grid-cols-7 gap-2">
+            {dayNames.map(day => (
+              <div key={day} className="text-center font-semibold text-gray-600 py-2 text-xs sm:text-sm">
+                {day}
+              </div>
+            ))}
+            
+            {Array.from({ length: startingDayOfWeek }).map((_, index) => (
+              <div key={`empty-${index}`} className="aspect-square" />
+            ))}
+            
+            {Array.from({ length: daysInMonth }).map((_, index) => {
           const day = index + 1;
           const date = new Date(year, month, day);
           const dayBookings = getBookingsForDate(date);
@@ -250,7 +252,9 @@ function CalendarView({ bookings, onDateClick, onBookingClick }: CalendarViewPro
               )}
             </div>
           );
-        })}
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -264,7 +268,7 @@ export default function AdminBookings() {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [viewMode] = useState<'list' | 'calendar'>('list');
   const [_selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Reschedule states
@@ -644,24 +648,16 @@ export default function AdminBookings() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Bookings</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Manage all appointment bookings
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')} 
-              variant="outline" 
-              size="sm"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              {viewMode === 'list' ? 'Calendar View' : 'List View'}
-            </Button>
-            <Button onClick={fetchBookings} variant="outline" size="sm">
+          <div className="grid grid-cols-1 gap-2 w-full sm:w-auto">
+            <Button onClick={fetchBookings} variant="outline" size="sm" className="w-full">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -837,11 +833,11 @@ export default function AdminBookings() {
 
                   <div className="xl:col-span-3 mt-3 xl:mt-0 xl:justify-self-end">
                     <p className="text-[11px] font-semibold uppercase text-gray-400 xl:hidden mb-1">Actions</p>
-                    <div className="flex items-center xl:justify-end gap-2">
+                    <div className="flex flex-wrap items-center xl:justify-end gap-2">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8"
+                        className="h-8 w-full sm:w-auto"
                         onClick={() => handleBookingClick(booking)}
                       >
                         View
@@ -851,7 +847,7 @@ export default function AdminBookings() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-8 border-blue-300 text-blue-700 hover:bg-blue-50"
+                          className="h-8 w-full sm:w-auto border-blue-300 text-blue-700 hover:bg-blue-50"
                           onClick={() => openReceiptViewer(booking.payment_receipt_url!, `Booking #${booking.id} Receipt`)}
                         >
                           <Eye className="h-4 w-4 mr-1" />
@@ -1096,7 +1092,7 @@ export default function AdminBookings() {
         </Dialog>
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Booking Details</DialogTitle>
             </DialogHeader>
@@ -1130,7 +1126,7 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex items-center gap-2 text-gray-700">
                     <Calendar className="h-5 w-5 text-[#2c4d5c]" />
                     <div>
@@ -1343,7 +1339,7 @@ export default function AdminBookings() {
 
         {/* Reschedule Dialog */}
         <Dialog open={showRescheduleDialog} onOpenChange={setShowRescheduleDialog}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Reschedule Appointment</DialogTitle>
             </DialogHeader>
@@ -1434,7 +1430,7 @@ export default function AdminBookings() {
                   </div>
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -1490,7 +1486,7 @@ export default function AdminBookings() {
                     className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-white text-black rounded-lg hover:bg-white/90 transition-colors"
                   >
                     <Download className="w-4 h-4" />
-                    Download Receipt
+                    <span className="hidden sm:inline">Download Receipt</span>
                   </button>
                   <Button
                     variant="ghost"
@@ -1519,7 +1515,7 @@ export default function AdminBookings() {
 
         {/* Business Status Update Dialog */}
         <Dialog open={showBusinessStatusDialog} onOpenChange={setShowBusinessStatusDialog}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Update Appointment Status</DialogTitle>
             </DialogHeader>
@@ -1542,7 +1538,7 @@ export default function AdminBookings() {
                     <label className="text-sm font-medium text-gray-900 block mb-2">
                       New Status
                     </label>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Badge 
                         className={`text-base py-2 px-4 cursor-pointer ${
                           businessStatusForm.business_status === 'completed' 
@@ -1614,7 +1610,7 @@ export default function AdminBookings() {
                   )}
                 </div>
 
-                <div className="flex gap-3 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4">
                   <Button
                     variant="outline"
                     onClick={() => {
