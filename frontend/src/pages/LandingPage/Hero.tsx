@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Stethoscope, Heart, ShieldCheck, CalendarClock, ClipboardCheck, MessageSquareHeart } from 'lucide-react'
+import { ArrowRight, Stethoscope, ShieldCheck, CalendarClock, ClipboardCheck, MessageSquareHeart } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
@@ -53,10 +53,6 @@ export function Hero() {
               <div className="flex items-center gap-2 text-sm text-gray-300">
                 <Stethoscope className="h-5 w-5 text-brand-200" />
                 <span>Personalized Care</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-300">
-                <Heart className="h-5 w-5 text-brand-200" />
-                <span>Science-Backed</span>
               </div>
             </div>
           </motion.div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import pool from '../config/database.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { sendAdminAlertEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -339,6 +340,32 @@ router.post('/orders', authMiddleware, async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    const userDetailsResult = await pool.query(
+      'SELECT first_name, last_name, email FROM users WHERE id = $1 LIMIT 1',
+      [req.user.userId]
+    );
+
+    const customer = userDetailsResult.rows[0] || {};
+    const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.email || `User #${req.user.userId}`;
+
+    const adminEmailResult = await sendAdminAlertEmail({
+      subject: `Shop order pending approval: #${orderId}`,
+      title: 'New Shop Order Pending Approval 🛒',
+      body: 'A new shop order was placed and is awaiting admin payment verification.',
+      details: {
+        'Order ID': orderId,
+        'Customer': customerName,
+        'Customer Email': customer.email || 'N/A',
+        'Total Amount': `PHP ${Number(totalAmount || 0).toLocaleString()}`,
+        'Items': items.length,
+        'Payment Status': 'Pending Verification'
+      }
+    });
+
+    if (!adminEmailResult.success && !adminEmailResult.skipped) {
+      console.warn(`⚠️ Admin shop-approval email failed for order #${orderId}:`, adminEmailResult.error);
+    }
 
     res.status(201).json({ 
       success: true, 

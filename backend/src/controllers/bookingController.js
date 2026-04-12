@@ -1,6 +1,6 @@
 import pool from '../config/database.js';
 import { uploadBase64Image } from '../services/storageService.js';
-import { sendBookingLifecycleEmail } from '../services/emailService.js';
+import { sendAdminAlertEmail, sendBookingLifecycleEmail } from '../services/emailService.js';
 
 const sanitizeForPath = (value, fallback = 'unknown') => {
   return String(value || fallback)
@@ -84,7 +84,7 @@ const createBooking = async (req, res) => {
 
     // Get service price and duration
     const serviceResult = await pool.query(
-      'SELECT price, duration_minutes FROM services WHERE id = $1',
+      'SELECT name, price, duration_minutes FROM services WHERE id = $1',
       [serviceId]
     );
 
@@ -92,7 +92,8 @@ const createBooking = async (req, res) => {
       return res.status(404).json({ message: 'Service not found' });
     }
 
-    const amountPaid = serviceResult.rows[0].price;
+  const serviceName = serviceResult.rows[0].name;
+  const amountPaid = serviceResult.rows[0].price;
     const serviceDuration = serviceResult.rows[0].duration_minutes || 30;
 
     // Calculate end_time based on booking_time + duration
@@ -162,10 +163,33 @@ const createBooking = async (req, res) => {
       ]
     );
 
+    const bookingId = result.rows[0].id;
+
+    const adminEmailResult = await sendAdminAlertEmail({
+      subject: `Incoming appointment: Booking #${bookingId}`,
+      title: 'New Incoming Appointment 📅',
+      body: 'A new booking has been created and may require admin review.',
+      details: {
+        'Booking ID': `BK-${String(bookingId).padStart(6, '0')}`,
+        'Patient Name': `${firstName || ''} ${lastName || ''}`.trim() || email,
+        'Patient Email': email,
+        'Service': serviceName,
+        'Appointment Type': appointmentType,
+        'Date': bookingDate,
+        'Time': bookingTime,
+        'Payment Status': 'Pending',
+        'Booking Status': 'Pending'
+      }
+    });
+
+    if (!adminEmailResult.success && !adminEmailResult.skipped) {
+      console.warn(`⚠️ Admin incoming-appointment email failed for booking #${bookingId}:`, adminEmailResult.error);
+    }
+
     res.status(201).json({
       success: true,
       message: 'Booking created successfully',
-      bookingId: result.rows[0].id
+      bookingId
     });
   } catch (error) {
     console.error('Create booking error:', error);
@@ -430,6 +454,24 @@ const uploadPaymentReceipt = async (req, res) => {
        WHERE id = $2`,
       [url, id]
     );
+
+    const adminEmailResult = await sendAdminAlertEmail({
+      subject: `Booking payment for approval: #${id}`,
+      title: 'Booking Receipt Uploaded 💳',
+      body: 'A booking payment receipt was uploaded and is waiting for admin approval.',
+      details: {
+        'Booking ID': `BK-${String(id).padStart(6, '0')}`,
+        'Patient Name': `${booking.first_name || ''} ${booking.last_name || ''}`.trim() || booking.email,
+        'Patient Email': booking.email,
+        'Service': booking.service_name,
+        'Current Status': booking.status,
+        'Receipt URL': url
+      }
+    });
+
+    if (!adminEmailResult.success && !adminEmailResult.skipped) {
+      console.warn(`⚠️ Admin booking-approval email failed for booking #${id}:`, adminEmailResult.error);
+    }
 
     res.json({
       success: true,

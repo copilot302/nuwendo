@@ -2,6 +2,7 @@ import express from 'express';
 import pool from '../config/database.js';
 import { flexibleAuthMiddleware } from '../middleware/auth.js';
 import { uploadBase64Image } from '../services/storageService.js';
+import { sendAdminAlertEmail } from '../services/emailService.js';
 
 const router = express.Router();
 
@@ -284,6 +285,32 @@ router.post('/checkout', flexibleAuthMiddleware, async (req, res) => {
     await client.query('DELETE FROM cart_items WHERE user_id = $1', [userId]);
 
     await client.query('COMMIT');
+
+    const customerResult = await pool.query(
+      'SELECT first_name, last_name, email FROM users WHERE id = $1 LIMIT 1',
+      [userId]
+    );
+
+    const customer = customerResult.rows[0] || {};
+    const customerName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim() || customer.email || `User #${userId}`;
+
+    const adminEmailResult = await sendAdminAlertEmail({
+      subject: `Shop order pending approval: #${orderId}`,
+      title: 'New Shop Order Pending Approval 🛒',
+      body: 'A new checkout order was placed and is awaiting admin payment verification.',
+      details: {
+        'Order ID': orderId,
+        'Customer': customerName,
+        'Customer Email': customer.email || req.user.email || 'N/A',
+        'Total Amount': `PHP ${Number(total || 0).toLocaleString()}`,
+        'Items': cartResult.rows.length,
+        'Payment Status': 'Pending Verification'
+      }
+    });
+
+    if (!adminEmailResult.success && !adminEmailResult.skipped) {
+      console.warn(`⚠️ Admin shop-approval email failed for order #${orderId}:`, adminEmailResult.error);
+    }
 
     res.json({
       success: true,

@@ -1,4 +1,5 @@
 import { Resend } from 'resend';
+import pool from '../config/database.js';
 
 // Initialize Resend
 const resend = process.env.RESEND_API_KEY 
@@ -101,6 +102,104 @@ const sendNotificationEmail = async ({ to, subject, html }) => {
     console.error('❌ Notification email send failed:', error.message);
     return { success: false, error: error.message };
   }
+};
+
+const parseEmailList = (rawValue) => {
+  if (!rawValue) return [];
+
+  return String(rawValue)
+    .split(/[;,\n]/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+};
+
+const resolveAdminNotificationRecipients = async () => {
+  const envRecipients = [
+    ...parseEmailList(process.env.ADMIN_NOTIFICATION_EMAILS),
+    ...parseEmailList(process.env.ADMIN_EMAIL)
+  ];
+
+  if (envRecipients.length > 0) {
+    return Array.from(new Set(envRecipients));
+  }
+
+  try {
+    const adminResult = await pool.query(
+      `SELECT email
+       FROM admin_users
+       WHERE is_active = true
+         AND email IS NOT NULL
+         AND email <> ''`
+    );
+
+    const dbRecipients = adminResult.rows
+      .map((row) => String(row.email || '').trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(dbRecipients));
+  } catch (error) {
+    console.warn('⚠️ Unable to resolve admin notification recipients:', error.message);
+    return [];
+  }
+};
+
+const buildDetailRows = (details = {}) => {
+  return Object.entries(details)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map(([label, value]) => `
+      <p style="margin: 0 0 6px 0;"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>
+    `)
+    .join('');
+};
+
+export const sendAdminAlertEmail = async ({
+  subject,
+  title,
+  body,
+  details = {},
+  ctaLabel,
+  ctaUrl
+}) => {
+  const recipients = await resolveAdminNotificationRecipients();
+
+  if (recipients.length === 0) {
+    console.warn('⚠️ No admin notification recipients configured. Skipping admin alert email.');
+    return { success: false, skipped: true, reason: 'No admin notification recipients configured' };
+  }
+
+  const detailRows = buildDetailRows(details);
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937; background: #f9fafb; padding: 24px;">
+        <div style="max-width: 640px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">
+          <div style="background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%); color: #ffffff; padding: 20px 24px;">
+            <h2 style="margin: 0; font-size: 22px;">${escapeHtml(title || 'Nuwendo Admin Alert')}</h2>
+          </div>
+          <div style="padding: 24px;">
+            <p style="margin-top: 0;">${escapeHtml(body || 'A new event requires admin review.')}</p>
+            ${detailRows ? `
+              <div style="margin: 16px 0; padding: 14px; border-radius: 10px; background: #f3f4f6;">
+                ${detailRows}
+              </div>
+            ` : ''}
+            ${ctaLabel && ctaUrl ? `
+              <p style="margin: 20px 0 0 0;">
+                <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600;">${escapeHtml(ctaLabel)}</a>
+              </p>
+            ` : ''}
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendNotificationEmail({
+    to: recipients,
+    subject: subject || 'Nuwendo Admin Alert',
+    html
+  });
 };
 
 // Generate 6-digit verification code

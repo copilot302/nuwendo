@@ -120,25 +120,25 @@ export function AboutUs() {
               <div className="text-center">
                 <div className="w-60 h-60 md:w-72 md:h-72 rounded-full overflow-hidden mx-auto bg-slate-100 ring-8 ring-white shadow-2xl">
                   <img
-                    src="/ivan-photo.png"
+                    src="/biome_ivan.png"
                     alt="Dr. Ivan Zapanta"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <p className="mt-6 font-extrabold text-3xl italic uppercase text-brand-800 tracking-wide">Dr. Ivan Zapanta</p>
-                <p className="text-slate-500 text-xl">Founder</p>
+                <p className="text-slate-500 text-xl">IM - Medical Nutrition</p>
               </div>
 
               <div className="text-center">
                 <div className="w-60 h-60 md:w-72 md:h-72 rounded-full overflow-hidden mx-auto bg-slate-100 ring-8 ring-white shadow-2xl">
                   <img
-                    src="/calvin_photo_1500x1500.jpg"
+                    src="/biome_calvin.png"
                     alt="Dr. Calvin Macrohon"
                     className="w-full h-full object-cover"
                   />
                 </div>
                 <p className="mt-6 font-extrabold text-3xl italic uppercase text-brand-800 tracking-wide">Dr. Calvin Macrohon</p>
-                <p className="text-slate-500 text-xl">Co-Founder</p>
+                <p className="text-slate-500 text-xl">IM - Endocrinology</p>
               </div>
             </div>
           </div>
