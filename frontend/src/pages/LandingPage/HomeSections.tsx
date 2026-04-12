@@ -182,62 +182,68 @@ export function HomeSections() {
         </div>
       </section>
 
-  <section className="py-14 md:py-24 bg-slate-50">
+  <section className="pt-1 pb-14 md:pt-3 md:pb-24 bg-slate-50">
         <div className="container">
           <div className="max-w-6xl mx-auto">
             <div className="text-center">
-              <p className="text-brand-700 font-semibold uppercase tracking-[0.16em] text-sm md:text-base">
+              <p className="text-brand-700 font-semibold uppercase tracking-[0.08em] text-sm md:text-base">
                 DOCTOR-LED RESULTS
               </p>
-              <h3 className="mt-4 text-3xl md:text-6xl font-black uppercase italic leading-[0.95] text-brand-800">
+              <h3 className="mt-3 text-4xl md:text-5xl font-extrabold leading-tight text-brand-800">
                 What Makes Nuwendo Different?
               </h3>
-              <p className="mt-6 text-base md:text-2xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
-                While there are many ways to lose weight, Nuwendo focuses on what matters most your biology, your health,
+              <p className="mt-5 text-base md:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+                While there are many ways to lose weight, Nuwendo focuses on what matters most — your biology, your health,
                 and your long-term success.
               </p>
             </div>
 
-            <div className="mt-12 grid lg:grid-cols-3 gap-6">
-              <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                <UsersRound className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-3xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[7rem] md:min-h-[10.5rem]">
+            <div className="mt-12 grid lg:grid-cols-3 gap-4">
+              <div className="bg-white p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col text-center">
+                <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                  <UsersRound className="h-6 w-6 text-brand" />
+                </div>
+                <h4 className="text-[0.95rem] md:text-[1.05rem] lg:text-[1.2rem] font-semibold leading-snug tracking-tight text-brand-800 whitespace-nowrap min-h-[1.75rem] md:min-h-[2rem]">
                   Doctor-Led Care For Everyone
                 </h4>
-                <p className="text-slate-700 mt-6 text-base md:text-xl leading-relaxed flex-1">
+                <p className="text-slate-700 mt-5 text-sm md:text-base leading-relaxed flex-1">
                   Whether you’re managing obesity, PCOS, thyroid issues, or just seeking safe weight loss, our programs are
                   guided by licensed doctors.
                 </p>
-                <Link to="/signup" className="inline-block mt-8 text-brand text-xl md:text-2xl hover:underline">
+                <Link to="/signup" className="inline-block mt-7 text-brand text-base md:text-lg font-semibold hover:underline">
                   Book Now
                 </Link>
               </div>
 
-              <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                <Percent className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-3xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[7rem] md:min-h-[10.5rem]">
+              <div className="bg-white p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col text-center">
+                <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                  <Percent className="h-6 w-6 text-brand" />
+                </div>
+                <h4 className="text-[0.95rem] md:text-[1.05rem] lg:text-[1.2rem] font-semibold leading-snug tracking-tight text-brand-800 whitespace-nowrap min-h-[1.75rem] md:min-h-[2rem]">
                   Structured Programs & Packages
                 </h4>
-                <p className="text-slate-700 mt-6 text-base md:text-xl leading-relaxed flex-1">
+                <p className="text-slate-700 mt-5 text-sm md:text-base leading-relaxed flex-1">
                   Choose from our Initial Consultation or Starter Package, designed for different needs and goals, with
                   bundled savings.
                 </p>
-                <Link to="/services" className="inline-block mt-8 text-brand text-xl md:text-2xl hover:underline">
+                <Link to="/services" className="inline-block mt-7 text-brand text-base md:text-lg font-semibold hover:underline">
                   Inquire Now
                 </Link>
               </div>
 
-              <div className="bg-white p-6 md:p-8 border border-slate-200 shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col">
-                <HeartPulse className="h-14 w-14 text-brand mb-5" />
-                <h4 className="text-3xl md:text-5xl font-black uppercase italic leading-tight text-brand-800 min-h-[7rem] md:min-h-[10.5rem]">
+              <div className="bg-white p-4 md:p-5 border border-slate-200 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-300 h-full flex flex-col text-center">
+                <div className="mx-auto mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100">
+                  <HeartPulse className="h-6 w-6 text-brand" />
+                </div>
+                <h4 className="text-[0.95rem] md:text-[1.05rem] lg:text-[1.2rem] font-semibold leading-snug tracking-tight text-brand-800 whitespace-nowrap min-h-[1.75rem] md:min-h-[2rem]">
                   Focus On Long-Term Health
                 </h4>
-                <p className="text-slate-700 mt-6 text-base md:text-xl leading-relaxed flex-1">
+                <p className="text-slate-700 mt-5 text-sm md:text-base leading-relaxed flex-1">
                   No quick fixes, just science-backed care to improve your metabolism, balance your hormones, and support
                   long-term health and wellness.
                 </p>
-                <Link to="/signup" className="inline-block mt-8 text-brand text-xl md:text-2xl hover:underline">
-                  Book Your Consultation
+                <Link to="/signup" className="inline-block mt-7 text-brand text-base md:text-lg font-semibold hover:underline">
+                  Book Your Consultation?
                 </Link>
               </div>
             </div>
