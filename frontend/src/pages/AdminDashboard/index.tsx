@@ -168,12 +168,12 @@ export default function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         {/* Header with Quick Actions */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">
               {new Date().toLocaleDateString('en-US', { 
                 weekday: 'long', 
                 year: 'numeric', 
@@ -182,12 +182,12 @@ export default function AdminDashboard() {
               })}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => navigate('/admin/bookings')} size="sm" className="bg-[#2c4d5c] hover:bg-[#234050]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto">
+            <Button onClick={() => navigate('/admin/bookings')} size="sm" className="w-full bg-[#2c4d5c] hover:bg-[#234050]">
               <Calendar className="h-4 w-4 mr-2" />
               View All Bookings
             </Button>
-            <Button onClick={() => navigate('/admin/schedule')} variant="outline" size="sm">
+            <Button onClick={() => navigate('/admin/schedule')} variant="outline" size="sm" className="w-full">
               <Clock className="h-4 w-4 mr-2" />
               Manage Schedule
             </Button>
@@ -224,14 +224,14 @@ export default function AdminDashboard() {
           )}
         </div>
         {/* Key Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
               <CardTitle className="text-sm font-medium text-gray-500">Total Bookings</CardTitle>
               <Users className="h-5 w-5 text-blue-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {loading ? '--' : stats?.totalBookings ?? 0}
               </div>
               <p className="text-xs text-gray-500 mt-1">All time bookings</p>
@@ -239,12 +239,12 @@ export default function AdminDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-shadow border-l-4 border-l-blue-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
               <CardTitle className="text-sm font-medium text-gray-500">Today's Appointments</CardTitle>
               <Calendar className="h-5 w-5 text-blue-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                 {loading ? '--' : stats?.todayAppointments ?? 0}
               </div>
               <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
@@ -255,12 +255,12 @@ export default function AdminDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
               <CardTitle className="text-sm font-medium text-gray-500">This Week</CardTitle>
               <TrendingUp className="h-5 w-5 text-green-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900">
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {loading ? '--' : stats?.thisWeekAppointments ?? 0}
               </div>
               <p className="text-xs text-gray-500 mt-1">Weekly appointments</p>
@@ -268,12 +268,12 @@ export default function AdminDashboard() {
           </Card>
 
           <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
               <CardTitle className="text-sm font-medium text-gray-500">Monthly Revenue</CardTitle>
               <DollarSign className="h-5 w-5 text-green-500" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
+              <div className="text-2xl sm:text-3xl font-bold text-green-600 break-words">
                 {loading ? '--' : currencyFormatter.format(stats?.monthlyRevenue ?? 0)}
               </div>
               <p className="text-xs text-gray-500 mt-1">Current month</p>
@@ -285,14 +285,14 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Today's Schedule - Takes 2 columns */}
           <Card className="lg:col-span-2">
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
                 <CardTitle>Today's Schedule</CardTitle>
                 <p className="text-sm text-gray-500 mt-1">
                   {todaysBookings.length} {todaysBookings.length === 1 ? 'appointment' : 'appointments'} scheduled
                 </p>
               </div>
-              <Button asChild variant="ghost" size="sm">
+              <Button asChild variant="ghost" size="sm" className="self-start sm:self-auto px-0 sm:px-3">
                 <Link to="/admin/bookings">View All</Link>
               </Button>
             </CardHeader>
@@ -304,25 +304,25 @@ export default function AdminDashboard() {
                   {todaysBookings.slice(0, 5).map((booking) => (
                     <div
                       key={booking.id}
-                      className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-[#2c4d5c] hover:shadow-sm transition-all cursor-pointer"
+                      className="p-3 sm:p-4 border border-gray-200 rounded-lg hover:border-[#2c4d5c] hover:shadow-sm transition-all cursor-pointer"
                       onClick={() => navigate('/admin/bookings')}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center justify-center w-16 h-16 bg-gray-50 rounded-lg">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gray-50 rounded-lg">
                           <Clock className="h-5 w-5 text-gray-400 mb-1" />
-                          <span className="text-sm font-semibold text-gray-700">
+                          <span className="text-xs sm:text-sm font-semibold text-gray-700">
                             {formatTime(booking.booking_time)}
                           </span>
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <p className="font-semibold text-gray-900">{booking.service_name}</p>
                           <p className="text-sm text-gray-500">
                             {booking.first_name} {booking.last_name}
                           </p>
-                          <p className="text-xs text-gray-400">{booking.email}</p>
+                          <p className="text-xs text-gray-400 break-all">{booking.email}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3 sm:pl-[68px]">
                         <Badge className={`${getStatusColor(booking.status)} flex items-center gap-1`}>
                           {getStatusIcon(booking.status)}
                           {booking.status}
@@ -420,12 +420,12 @@ export default function AdminDashboard() {
 
         {/* Recent Activity */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
               <CardTitle>Recent Bookings</CardTitle>
               <p className="text-sm text-gray-500 mt-1">Latest booking activity</p>
             </div>
-            <Button asChild variant="ghost" size="sm">
+            <Button asChild variant="ghost" size="sm" className="self-start sm:self-auto px-0 sm:px-3">
               <Link to="/admin/bookings">See All</Link>
             </Button>
           </CardHeader>
@@ -443,10 +443,11 @@ export default function AdminDashboard() {
                     <div className="flex-1">
                       <p className="font-semibold text-gray-900">{booking.service_name}</p>
                       <p className="text-sm text-gray-500">
-                        {booking.first_name} {booking.last_name}  {booking.email}
+                        {booking.first_name} {booking.last_name}
                       </p>
+                      <p className="text-xs text-gray-400 break-all">{booking.email}</p>
                     </div>
-                    <div className="flex items-center gap-4 text-sm">
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div className="flex items-center gap-1 text-gray-600">
                         <Calendar className="h-4 w-4 text-gray-400" />
                         {formatDate(booking.booking_date)}
