@@ -144,21 +144,10 @@ export function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t border-white/10">
-        <div className="container py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-white/60 text-sm">
+        <div className="container py-6 flex items-center justify-center">
+          <p className="text-white/60 text-sm text-center">
             &copy; {new Date().getFullYear()} Nuwendo Metabolic Clinic. All rights reserved.
           </p>
-          <div className="flex items-center gap-6 text-sm">
-            <a href="#" className="text-white/60 hover:text-white transition-colors">
-              Privacy Policy
-            </a>
-            <a href="#" className="text-white/60 hover:text-white transition-colors">
-              Terms of Service
-            </a>
-            <a href="/login" className="text-white/60 hover:text-white transition-colors">
-              Admin
-            </a>
-          </div>
         </div>
       </div>
     </footer>

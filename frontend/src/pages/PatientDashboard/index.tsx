@@ -1766,12 +1766,8 @@ export default function PatientDashboard() {
             </div>
           </div>
           
-          <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500">
-            <div className="flex gap-4 mb-4 md:mb-0">
-              <a href="#">Terms & Conditions</a>
-              <a href="#">Privacy Policy</a>
-            </div>
-            <p>© 2026 Nuwendo Metabolic Clinic. All rights reserved.</p>
+          <div className="border-t border-gray-800 mt-8 pt-8 flex items-center justify-center text-xs text-gray-500">
+            <p className="text-center">© 2026 Nuwendo Metabolic Clinic. All rights reserved.</p>
           </div>
         </div>
       </footer>
