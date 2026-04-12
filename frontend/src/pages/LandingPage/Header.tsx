@@ -31,7 +31,7 @@ export function Header() {
       <header className="sticky top-0 z-50 w-full bg-white shadow-sm">
         <div className="container flex h-20 items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-16" />
+            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-12 sm:h-16" />
           </Link>
 
           {/* Desktop Navigation */}

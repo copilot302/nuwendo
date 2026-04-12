@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { LandingPage } from '@/pages/LandingPage'
 import AboutUsPage from '@/pages/AboutUsPage'
@@ -28,10 +29,15 @@ import { AdminOrders } from '@/pages/AdminOrders'
 import AdminReports from '@/pages/AdminReports'
 
 function AppRoutes() {
+  const location = useLocation()
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [location.pathname])
+
   // Force re-evaluation of auth/session guards on every route change.
   // This prevents stale localStorage-derived guards after login/logout
   // (e.g. needing manual refresh before admin dashboard appears).
-  useLocation()
 
   const hasAdminSession = !!localStorage.getItem('adminToken')
 

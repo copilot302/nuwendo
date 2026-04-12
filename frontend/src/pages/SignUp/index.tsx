@@ -93,20 +93,20 @@ export default function SignUp() {
       className="min-h-screen flex"
     >
       {/* Left Side - Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-12 lg:px-20 py-8 sm:py-12 bg-white">
         <div className="w-full max-w-lg mx-auto">
           {/* Logo */}
-          <div className="mb-10">
-            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-16" />
+          <div className="mb-8 sm:mb-10">
+            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-12 sm:h-16" />
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
               Your health journey{' '}
               <span className="text-brand">starts here</span>
             </h1>
-            <p className="text-lg text-gray-600">
+            <p className="text-base sm:text-lg text-gray-600">
               Enter your email to get started. We'll send you a verification code.
             </p>
           </div>
@@ -171,7 +171,7 @@ export default function SignUp() {
           </div>
 
           {/* Features */}
-          <div className="mt-12 grid grid-cols-2 gap-4">
+          <div className="mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             {features.map((feature, index) => (
               <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center">

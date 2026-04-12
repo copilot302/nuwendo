@@ -31,30 +31,30 @@ const services = [
 
 export function Services() {
   return (
-    <section id="services" className="py-20 bg-gray-50">
+  <section id="services" className="py-14 md:py-20 bg-gray-50">
       <div className="container">
         {/* Section Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="text-center mb-16"
+          className="text-center mb-12 md:mb-16"
         >
           <p className="text-brand font-medium mb-2">ONLINE & CLINIC CONSULTS</p>
-          <h2 className="text-3xl md:text-4xl font-bold text-brand-800 mb-4">
+          <h2 className="text-2xl md:text-4xl font-bold text-brand-800 mb-4">
             Our Services & Programs
           </h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="text-gray-600 text-sm md:text-base max-w-2xl mx-auto">
             Looking for trusted medical weight management? Discover our full range of doctor-led in-clinic and online care services.
           </p>
 
           {/* Appointment Type Badges */}
-          <div className="flex justify-center gap-4 mt-6">
-            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand px-4 py-2 rounded-full text-sm font-medium">
+          <div className="flex justify-center gap-3 mt-6 flex-wrap">
+            <div className="inline-flex items-center gap-2 bg-brand-100 text-brand px-4 py-2 rounded-full text-xs md:text-sm font-medium">
               <Monitor className="h-4 w-4" />
               Online Consults
             </div>
-            <div className="inline-flex items-center gap-2 bg-brand/10 text-brand px-4 py-2 rounded-full text-sm font-medium">
+            <div className="inline-flex items-center gap-2 bg-brand/10 text-brand px-4 py-2 rounded-full text-xs md:text-sm font-medium">
               <Building2 className="h-4 w-4" />
               Clinic Visits
             </div>
@@ -84,14 +84,14 @@ export function Services() {
               </div>
 
               {/* Content */}
-              <div className="p-6 flex flex-col flex-1">
-                <h3 className="text-3xl font-extrabold text-brand-800 leading-tight min-h-[6.5rem] group-hover:text-brand transition-colors">
+              <div className="p-5 md:p-6 flex flex-col flex-1">
+                <h3 className="text-2xl md:text-3xl font-extrabold text-brand-800 leading-tight min-h-[5rem] md:min-h-[6.5rem] group-hover:text-brand transition-colors">
                   {service.title}
                 </h3>
-                <p className="text-gray-600 text-base leading-relaxed flex-1">
+                <p className="text-gray-600 text-sm md:text-base leading-relaxed flex-1">
                   {service.description}
                 </p>
-                <Link to="/signup" className="inline-flex items-center gap-2 text-brand text-lg font-medium mt-6 hover:gap-3 transition-all">
+                <Link to="/signup" className="inline-flex items-center gap-2 text-brand text-base md:text-lg font-medium mt-6 hover:gap-3 transition-all">
                   Book Now
                   <ArrowRight className="h-4 w-4" />
                 </Link>

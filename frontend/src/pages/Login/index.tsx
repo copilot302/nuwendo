@@ -270,22 +270,22 @@ export default function Login() {
       className="min-h-screen flex"
     >
       {/* Left Side - Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-20 py-12 bg-white">
+      <div className="flex-1 flex flex-col justify-center px-4 sm:px-12 lg:px-20 py-8 sm:py-12 bg-white">
         <div className="w-full max-w-lg mx-auto">
           {/* Logo */}
-          <div className="mb-10">
-            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-16" />
+          <div className="mb-8 sm:mb-10">
+            <img src="/NUWENDO.svg" alt="Nuwendo Metabolic Clinic" className="h-12 sm:h-16" />
           </div>
 
           {step === 'email' ? (
             <>
               {/* Heading */}
               <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+                <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
                   Welcome back to{' '}
                   <span className="text-brand">Nuwendo</span>
                 </h1>
-                <p className="text-lg text-gray-600">
+                <p className="text-base sm:text-lg text-gray-600">
                   Enter your email to sign in. We'll send you a verification code.
                 </p>
               </div>
@@ -344,7 +344,7 @@ export default function Login() {
               </div>
 
               {/* Features */}
-              <div className="mt-12 grid grid-cols-2 gap-4">
+              <div className="mt-10 sm:mt-12 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {features.map((feature, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                     <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center">
@@ -359,10 +359,10 @@ export default function Login() {
             <>
               {/* Admin Password Step */}
               <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+                <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
                   Admin Login
                 </h1>
-                <p className="text-lg text-gray-600">
+                <p className="text-base sm:text-lg text-gray-600">
                   Logging in as{' '}
                   <span className="font-medium text-gray-900">{email}</span>
                 </p>
@@ -425,10 +425,10 @@ export default function Login() {
             <>
               {/* Verification Code Step */}
               <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+                <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
                   Check your email
                 </h1>
-                <p className="text-lg text-gray-600">
+                <p className="text-base sm:text-lg text-gray-600">
                   We've sent a 6-digit verification code to{' '}
                   <span className="font-medium text-gray-900">{email}</span>
                 </p>
@@ -440,7 +440,7 @@ export default function Login() {
                   <Label className="text-sm font-medium text-gray-700 mb-3 block">
                     Enter verification code
                   </Label>
-                  <div className="flex gap-3 justify-between" onPaste={handlePaste}>
+                  <div className="flex gap-2 sm:gap-3 justify-between" onPaste={handlePaste}>
                     {code.map((digit, index) => (
                       <input
                         key={index}
@@ -451,7 +451,7 @@ export default function Login() {
                         value={digit}
                         onChange={(e) => handleChange(index, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(index, e)}
-                        className="w-12 h-14 text-center text-2xl font-semibold border-2 border-gray-300 rounded-xl focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all"
+                        className="w-10 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-semibold border-2 border-gray-300 rounded-lg sm:rounded-xl focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none transition-all"
                         disabled={isLoading}
                       />
                     ))}
