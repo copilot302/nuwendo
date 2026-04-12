@@ -7,25 +7,25 @@ const services = [
     number: '01',
     title: 'Nuwendo Starter',
     description: 'An entry-level program designed to kickstart your metabolic health journey with structured support and foundational interventions. Ideal for individuals beginning weight loss or metabolic optimization under guided care.',
-    image: '/9.png',
+    image: '/1.png',
   },
   {
     number: '02',
     title: 'Nutrition Plan',
     description: 'A personalized, evidence-based meal plan tailored to your metabolic profile, preferences, and health goals. Focuses on sustainable eating habits that support weight management and overall wellness.',
-    image: '/8.png',
+    image: '/2.png',
   },
   {
     number: '03',
     title: 'Metabolic Work-up',
     description: 'A comprehensive set of diagnostic tests and assessments to evaluate key metabolic markers such as glucose, insulin, lipids, and hormones. Provides data-driven insights to guide targeted and effective treatment plans.',
-    image: '/7.png',
+    image: '/3.png',
   },
   {
     number: '04',
     title: 'BeFit x Nuwendo',
     description: 'A collaborative program combining fitness training and medical metabolic care to deliver a holistic approach to weight loss and health optimization. Integrates structured exercise with personalized clinical guidance for more effective and sustainable results.',
-    image: '/6.png',
+    image: '/4.png',
   },
 ]
 
