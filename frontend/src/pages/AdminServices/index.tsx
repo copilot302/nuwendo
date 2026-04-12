@@ -222,6 +222,21 @@ export function AdminServices() {
     setShowForm(true)
   }
 
+  const openCreateForm = () => {
+    setEditingService(null)
+    setShowCustomCategory(false)
+    setCustomCategory('')
+    setFormData({
+      name: '',
+      description: '',
+      duration_minutes: 30,
+      price: '',
+      category: '',
+      is_active: true
+    })
+    setShowForm(true)
+  }
+
   const formatPrice = (price: string) => {
     return new Intl.NumberFormat('en-PH', {
       style: 'currency',
@@ -250,14 +265,14 @@ export function AdminServices() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Page Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Manage Services</h1>
-            <p className="text-gray-500">Create and manage healthcare services</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Manage Services</h1>
+            <p className="text-sm sm:text-base text-gray-500">Create and manage healthcare services</p>
           </div>
-          <Button onClick={() => setShowForm(true)} disabled={showForm} className="bg-brand hover:bg-brand/90">
+          <Button onClick={openCreateForm} disabled={showForm} className="w-full sm:w-auto bg-brand hover:bg-brand/90">
             <Plus className="h-4 w-4 mr-2" />
             Add Service
           </Button>
@@ -270,7 +285,7 @@ export function AdminServices() {
 
         {/* Service Form Modal */}
         <Dialog open={showForm} onOpenChange={setShowForm}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingService ? 'Edit Service' : 'Add New Service'}</DialogTitle>
               <DialogDescription>
@@ -398,7 +413,7 @@ export function AdminServices() {
                 </div>
               )}
 
-              <div className="flex gap-3 justify-end">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
                 <Button type="button" variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
@@ -413,11 +428,12 @@ export function AdminServices() {
 
         {/* Category Filter */}
         <div className="mb-6">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-nowrap sm:flex-wrap overflow-x-auto pb-1">
             <Button
               variant={selectedCategory === 'all' ? 'default' : 'outline'}
               size="sm"
               onClick={() => setSelectedCategory('all')}
+              className="whitespace-nowrap"
             >
               All Services ({services.length})
             </Button>
@@ -427,6 +443,7 @@ export function AdminServices() {
                 variant={selectedCategory === category ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedCategory(category)}
+                className="whitespace-nowrap"
               >
                 {category} ({services.filter(s => s.category === category).length})
               </Button>
@@ -435,13 +452,13 @@ export function AdminServices() {
         </div>
 
         {/* Services List */}
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredServices.map((service) => (
             <Card key={service.id} className={service.is_active ? '' : 'opacity-60'}>
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-semibold text-lg mb-1">{service.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-base sm:text-lg mb-1 break-words">{service.name}</h3>
                     <div className="flex flex-wrap gap-1.5">
                       <Badge variant="secondary" className="text-xs">
                         {service.category}
@@ -464,9 +481,9 @@ export function AdminServices() {
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-600 mb-4">{service.description}</p>
+                <p className="text-sm text-gray-600 mb-4 break-words">{service.description}</p>
 
-                <div className="flex items-center gap-4 mb-4 text-sm">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 text-sm">
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4 text-gray-400" />
                     <span>{service.duration_minutes} min</span>
@@ -485,15 +502,19 @@ export function AdminServices() {
                     size="sm" 
                     onClick={() => startEdit(service)}
                     disabled={showForm}
+                    className="flex-1"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
                   </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={() => handleDelete(service.id)}
+                    className="flex-1"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Delete
                   </Button>
                 </div>
 
@@ -519,7 +540,7 @@ export function AdminServices() {
                 Show All Services
               </Button>
             )}
-            <Button onClick={() => setShowForm(true)} className="bg-brand hover:bg-brand/90">
+            <Button onClick={openCreateForm} className="bg-brand hover:bg-brand/90">
               <Plus className="h-4 w-4 mr-2" />
               Add First Service
             </Button>
