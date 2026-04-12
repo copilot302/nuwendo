@@ -113,11 +113,24 @@ const parseEmailList = (rawValue) => {
     .filter(Boolean);
 };
 
+const normalizeAdminRecipient = (email) => {
+  const normalized = String(email || '').trim();
+  if (!normalized) return '';
+
+  if (normalized.toLowerCase() === 'nuwendomc@gmail.com') {
+    return 'nuwendoph@gmail.com';
+  }
+
+  return normalized;
+};
+
 const resolveAdminNotificationRecipients = async () => {
   const envRecipients = [
     ...parseEmailList(process.env.ADMIN_NOTIFICATION_EMAILS),
     ...parseEmailList(process.env.ADMIN_EMAIL)
-  ];
+  ]
+    .map(normalizeAdminRecipient)
+    .filter(Boolean);
 
   if (envRecipients.length > 0) {
     return Array.from(new Set(envRecipients));
@@ -133,7 +146,7 @@ const resolveAdminNotificationRecipients = async () => {
     );
 
     const dbRecipients = adminResult.rows
-      .map((row) => String(row.email || '').trim())
+      .map((row) => normalizeAdminRecipient(row.email))
       .filter(Boolean);
 
     return Array.from(new Set(dbRecipients));
