@@ -64,9 +64,10 @@ export function HomeSections() {
               initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, amount: 0.2 }}
-              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-900 via-brand-800 to-brand px-6 py-10 md:px-10"
+              className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-accent via-[#ef843f] to-[#ea7d3a] px-6 py-10 md:px-10"
             >
-              <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-white/10 blur-2xl" />
+              <div className="absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-brand-900/30 via-brand-900/10 to-transparent" />
+              <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-brand-900/20 blur-2xl" />
               <p className="text-sm uppercase tracking-[0.2em] text-brand-100 font-semibold relative z-10">What We Do</p>
               <h3 className="text-2xl md:text-5xl font-black text-white mt-3 max-w-3xl relative z-10">
                 Explore our doctor-led care programs

@@ -102,9 +102,9 @@ export default function SignUp() {
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4">
+            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 leading-tight mb-4 whitespace-nowrap">
               Your health journey{' '}
-              <span className="text-brand">starts here</span>
+              <span className="text-accent">starts here</span>
             </h1>
             <p className="text-base sm:text-lg text-gray-600">
               Enter your email to get started. We'll send you a verification code.
