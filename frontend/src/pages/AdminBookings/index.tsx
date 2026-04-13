@@ -8,6 +8,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
 import {
@@ -993,6 +994,9 @@ export default function AdminBookings() {
           <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-0 overflow-hidden [&>button]:hidden">
             <DialogHeader className="sr-only">
               <DialogTitle>Patient Profile</DialogTitle>
+              <DialogDescription>
+                View patient details and booking history.
+              </DialogDescription>
             </DialogHeader>
 
             {loadingPatientProfile ? (
@@ -1149,6 +1153,9 @@ export default function AdminBookings() {
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Booking Details</DialogTitle>
+              <DialogDescription>
+                Review booking information and manage appointment actions.
+              </DialogDescription>
             </DialogHeader>
             {selectedBooking && (
               <div className="space-y-4">
@@ -1396,6 +1403,9 @@ export default function AdminBookings() {
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Reschedule Appointment</DialogTitle>
+              <DialogDescription>
+                Choose a new date and time for this appointment.
+              </DialogDescription>
             </DialogHeader>
             {selectedBooking && (
               <div className="space-y-4">
@@ -1446,8 +1456,8 @@ export default function AdminBookings() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Select available time slot</option>
-                        {availableSlots.map((slot) => (
-                          <option key={slot.id} value={slot.start_time}>
+                        {availableSlots.map((slot, index) => (
+                          <option key={`${slot.start_time}-${slot.end_time}-${slot.id ?? index}`} value={slot.start_time}>
                             {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
                           </option>
                         ))}
@@ -1572,6 +1582,9 @@ export default function AdminBookings() {
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Update Appointment Status</DialogTitle>
+              <DialogDescription>
+                Set the appointment outcome and optional admin notes.
+              </DialogDescription>
             </DialogHeader>
             {selectedBooking && (
               <div className="space-y-4">

@@ -25,7 +25,7 @@ import {
   X,
   ClipboardList
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { AdminLayout } from '@/components/AdminLayout'
 import { API_URL } from '@/config/api'
 
@@ -65,6 +65,7 @@ interface Patient {
 
 export function AdminShop() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<ShopItem[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -99,6 +100,15 @@ export function AdminShop() {
     }
     fetchData()
   }, [navigate])
+
+  useEffect(() => {
+    if (searchParams.get('view') === 'access') {
+      setShowAccessModal(true)
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('view')
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const fetchData = async () => {
     setIsLoading(true)

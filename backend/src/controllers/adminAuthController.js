@@ -227,38 +227,46 @@ const adminLogout = async (req, res) => {
 // Get dashboard stats
 const getDashboardStats = async (req, res) => {
   try {
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
+    const manilaWindowResult = await pool.query(
+      `SELECT (NOW() AT TIME ZONE 'Asia/Manila')::date AS today,
+              date_trunc('week', NOW() AT TIME ZONE 'Asia/Manila')::date AS week_start,
+              (date_trunc('week', NOW() AT TIME ZONE 'Asia/Manila')::date + INTERVAL '6 day')::date AS week_end`
+    );
+
+    const { today, week_start: weekStart, week_end: weekEnd } = manilaWindowResult.rows[0];
 
     // Total bookings
     const totalBookingsResult = await pool.query(
-      'SELECT COUNT(*) as total FROM bookings'
+      `SELECT COUNT(*)::int as total
+       FROM bookings
+       WHERE status != 'pending'`
     );
 
     // Today's appointments
     const todayAppointmentsResult = await pool.query(
-      'SELECT COUNT(*) as today FROM bookings WHERE booking_date = $1',
+      `SELECT COUNT(*)::int as today
+       FROM bookings
+       WHERE status != 'pending'
+         AND booking_date = $1`,
+      [today]
+    );
+
+    const todayConfirmedCountResult = await pool.query(
+      `SELECT COUNT(*)::int AS total
+       FROM bookings
+       WHERE status = 'confirmed'
+         AND COALESCE(business_status, 'scheduled') = 'scheduled'
+         AND booking_date = $1`,
       [today]
     );
 
     // This week's appointments
-    const thisWeekStart = new Date();
-    thisWeekStart.setDate(thisWeekStart.getDate() - thisWeekStart.getDay());
-    const thisWeekEnd = new Date(thisWeekStart);
-    thisWeekEnd.setDate(thisWeekStart.getDate() + 6);
-
     const thisWeekResult = await pool.query(
-      'SELECT COUNT(*) as week FROM bookings WHERE booking_date BETWEEN $1 AND $2',
-      [thisWeekStart.toISOString().split('T')[0], thisWeekEnd.toISOString().split('T')[0]]
-    );
-
-    // Revenue this month
-    const thisMonthStart = new Date();
-    thisMonthStart.setDate(1);
-    
-    const revenueResult = await pool.query(
-      'SELECT COALESCE(SUM(amount_paid), 0) as revenue FROM bookings WHERE booking_date >= $1 AND payment_status = $2',
-      [thisMonthStart.toISOString().split('T')[0], 'paid']
+      `SELECT COUNT(*)::int as week
+       FROM bookings
+       WHERE status != 'pending'
+         AND booking_date BETWEEN $1 AND $2`,
+      [weekStart, weekEnd]
     );
 
     // Pending payments (must match /admin/pending-payments criteria)
@@ -299,14 +307,30 @@ const getDashboardStats = async (req, res) => {
          AND payment_receipt_url IS NOT NULL`
     );
 
-    // Recent bookings
-    const recentBookingsResult = await pool.query(
-      `SELECT b.id, b.booking_date, b.booking_time, b.status, b.amount_paid, b.payment_status,
+    // Today's schedule
+    const todayBookingsResult = await pool.query(
+      `SELECT b.id, b.booking_date, b.booking_time, b.status, b.business_status, b.cancelled_by_type, b.amount_paid, b.payment_status,
               u.first_name, u.last_name, u.email,
               s.name as service_name
        FROM bookings b
        JOIN users u ON b.user_id = u.id
        JOIN services s ON b.service_id = s.id
+       WHERE b.status != 'pending'
+         AND b.booking_date = $1
+       ORDER BY b.booking_time ASC
+       LIMIT 20`,
+      [today]
+    );
+
+    // Recent bookings
+    const recentBookingsResult = await pool.query(
+      `SELECT b.id, b.booking_date, b.booking_time, b.status, b.business_status, b.cancelled_by_type, b.amount_paid, b.payment_status,
+              u.first_name, u.last_name, u.email,
+              s.name as service_name
+       FROM bookings b
+       JOIN users u ON b.user_id = u.id
+       JOIN services s ON b.service_id = s.id
+       WHERE b.status != 'pending'
        ORDER BY b.created_at DESC
        LIMIT 10`
     );
@@ -336,10 +360,10 @@ const getDashboardStats = async (req, res) => {
     res.json({
       success: true,
       stats: {
-        totalBookings: parseInt(totalBookingsResult.rows[0].total),
-        todayAppointments: parseInt(todayAppointmentsResult.rows[0].today),
-        thisWeekAppointments: parseInt(thisWeekResult.rows[0].week),
-        monthlyRevenue: parseFloat(revenueResult.rows[0].revenue),
+        totalBookings: totalBookingsResult.rows[0].total,
+        todayAppointments: todayAppointmentsResult.rows[0].today,
+        todayConfirmedCount: todayConfirmedCountResult.rows[0].total,
+        thisWeekAppointments: thisWeekResult.rows[0].week,
         pendingPayments: pendingPaymentsResult.rows,
         pendingBookingApprovalsCount: pendingBookingCountResult.rows[0].total,
         pendingShopApprovalsCount: pendingShopCountResult.rows[0].total,
@@ -347,6 +371,7 @@ const getDashboardStats = async (req, res) => {
           pendingBookingCountResult.rows[0].total + pendingShopCountResult.rows[0].total,
         pendingPaymentsTotal: parseFloat(pendingAmountResult.rows[0].total),
         bookingOverview,
+        todayBookings: todayBookingsResult.rows,
         recentBookings: recentBookingsResult.rows
       }
     });

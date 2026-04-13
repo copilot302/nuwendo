@@ -8,17 +8,14 @@ import {
   Calendar,
   Clock,
   Users,
-  DollarSign,
   TrendingUp,
   ChevronRight,
-  AlertCircle,
-  CheckCircle,
-  XCircle,
   Video,
-  MapPin,
   Bell,
   Activity,
   CreditCard,
+  Package,
+  ShoppingBag,
 } from 'lucide-react';
 import { API_URL } from '@/config/api';
 
@@ -27,6 +24,8 @@ interface Booking {
   booking_date: string;
   booking_time: string;
   status: string;
+  business_status?: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  cancelled_by_type?: 'admin' | 'patient' | null;
   amount_paid: number;
   payment_status?: string;
   first_name: string;
@@ -40,7 +39,6 @@ interface DashboardStats {
   totalBookings: number;
   todayAppointments: number;
   thisWeekAppointments: number;
-  monthlyRevenue: number;
   bookingOverview?: {
     online: number;
     onSite: number;
@@ -48,6 +46,7 @@ interface DashboardStats {
   pendingBookingApprovalsCount?: number;
   pendingShopApprovalsCount?: number;
   pendingApprovalsCount?: number;
+  todayBookings?: Booking[];
   recentBookings: Booking[];
 }
 
@@ -129,45 +128,42 @@ export default function AdminDashboard() {
     }
   };
 
-  const currencyFormatter = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  });
-
-  const todaysBookings = stats?.recentBookings.filter(
-    (b) => b.booking_date === new Date().toISOString().split('T')[0]
-  ) || [];
+  const todaysBookings = stats?.todayBookings || [];
 
   const pendingApprovalsCount = stats?.pendingApprovalsCount ?? 0;
   const pendingBookingApprovalsCount = stats?.pendingBookingApprovalsCount ?? 0;
   const pendingShopApprovalsCount = stats?.pendingShopApprovalsCount ?? 0;
-  const confirmedToday = todaysBookings.filter((b) => b.status === 'confirmed').length;
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const getDashboardBookingStatusInfo = (booking: Booking) => {
+    if (booking.business_status === 'completed' || booking.status === 'completed') {
+      return { label: 'Completed', className: 'bg-blue-100 text-blue-700' };
     }
-  };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <CheckCircle className="h-3 w-3" />;
-      case 'pending':
-        return <AlertCircle className="h-3 w-3" />;
-      case 'cancelled':
-        return <XCircle className="h-3 w-3" />;
-      default:
-        return null;
+    if (booking.business_status === 'no_show') {
+      return { label: 'No Show', className: 'bg-orange-100 text-orange-700' };
     }
+
+    if (booking.business_status === 'cancelled' || booking.status === 'cancelled') {
+      if (booking.cancelled_by_type === 'admin') {
+        if (booking.payment_status === 'rejected') {
+          return { label: 'Rejected', className: 'bg-red-100 text-red-700' };
+        }
+        return { label: 'Cancelled by Admin', className: 'bg-red-100 text-red-700' };
+      }
+      if (booking.cancelled_by_type === 'patient') {
+        return { label: 'Cancelled by Patient', className: 'bg-red-100 text-red-700' };
+      }
+      return { label: 'Cancelled', className: 'bg-red-100 text-red-700' };
+    }
+
+    if (booking.status === 'confirmed') {
+      return { label: 'Confirmed', className: 'bg-green-100 text-green-700' };
+    }
+
+    if (booking.status === 'pending') {
+      return { label: 'Pending', className: 'bg-yellow-100 text-yellow-700' };
+    }
+
+    return { label: 'Scheduled', className: 'bg-gray-100 text-gray-700' };
   };
 
   return (
@@ -238,7 +234,6 @@ export default function AdminDashboard() {
               <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {loading ? '--' : stats?.totalBookings ?? 0}
               </div>
-              <p className="text-xs text-gray-500 mt-1">All time bookings</p>
             </CardContent>
           </Card>
 
@@ -251,10 +246,6 @@ export default function AdminDashboard() {
               <div className="text-2xl sm:text-3xl font-bold text-blue-600">
                 {loading ? '--' : stats?.todayAppointments ?? 0}
               </div>
-              <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                <CheckCircle className="h-3 w-3" />
-                {confirmedToday} confirmed
-              </p>
             </CardContent>
           </Card>
 
@@ -267,20 +258,23 @@ export default function AdminDashboard() {
               <div className="text-2xl sm:text-3xl font-bold text-gray-900">
                 {loading ? '--' : stats?.thisWeekAppointments ?? 0}
               </div>
-              <p className="text-xs text-gray-500 mt-1">Weekly appointments</p>
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow border-l-4 border-l-green-500">
+          <Card className="hover:shadow-md transition-shadow border-l-4 border-l-indigo-500">
             <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-6">
-              <CardTitle className="text-sm font-medium text-gray-500">Monthly Revenue</CardTitle>
-              <DollarSign className="h-5 w-5 text-green-500" />
+              <CardTitle className="text-sm font-medium text-gray-500">Booking Overview</CardTitle>
+              <Video className="h-5 w-5 text-indigo-500" />
             </CardHeader>
-            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6">
-              <div className="text-2xl sm:text-3xl font-bold text-green-600 break-words">
-                {loading ? '--' : currencyFormatter.format(stats?.monthlyRevenue ?? 0)}
+            <CardContent className="px-4 pb-4 sm:px-6 sm:pb-6 space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-blue-700 font-medium">Online</span>
+                <span className="text-blue-700 font-bold">{loading ? '--' : stats?.bookingOverview?.online ?? 0}</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">Current month</p>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-green-700 font-medium">On-Site</span>
+                <span className="text-green-700 font-bold">{loading ? '--' : stats?.bookingOverview?.onSite ?? 0}</span>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -305,36 +299,41 @@ export default function AdminDashboard() {
                 <div className="py-8 text-center text-gray-500">Loading schedule...</div>
               ) : todaysBookings.length > 0 ? (
                 <div className="space-y-3">
-                  {todaysBookings.slice(0, 5).map((booking) => (
+                  {todaysBookings.slice(0, 5).map((booking) => {
+                    const statusInfo = getDashboardBookingStatusInfo(booking);
+
+                    return (
                     <div
                       key={booking.id}
                       className="p-3 sm:p-4 border border-gray-200 rounded-lg hover:border-[#2c4d5c] hover:shadow-sm transition-all cursor-pointer"
                       onClick={() => navigate('/admin/bookings')}
                     >
-                      <div className="flex items-start gap-3 sm:gap-4">
-                        <div className="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gray-50 rounded-lg">
-                          <Clock className="h-5 w-5 text-gray-400 mb-1" />
-                          <span className="text-xs sm:text-sm font-semibold text-gray-700">
-                            {formatTime(booking.booking_time)}
-                          </span>
+                      <div className="flex items-start justify-between gap-3 sm:gap-4">
+                        <div className="min-w-0 flex items-start gap-3 sm:gap-4">
+                          <div className="flex flex-col items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gray-50 rounded-lg shrink-0">
+                            <Clock className="h-5 w-5 text-gray-400 mb-1" />
+                            <span className="text-xs sm:text-sm font-semibold text-gray-700">
+                              {formatTime(booking.booking_time)}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-gray-900">{booking.service_name}</p>
+                            <p className="text-sm text-gray-500">
+                              {booking.first_name} {booking.last_name}
+                            </p>
+                            <p className="text-xs text-gray-400 break-all">{booking.email}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-gray-900">{booking.service_name}</p>
-                          <p className="text-sm text-gray-500">
-                            {booking.first_name} {booking.last_name}
-                          </p>
-                          <p className="text-xs text-gray-400 break-all">{booking.email}</p>
+                        <div className="flex items-center gap-2 shrink-0 pt-1">
+                          <Badge className={statusInfo.className}>
+                            {statusInfo.label}
+                          </Badge>
+                          <ChevronRight className="h-4 w-4 text-gray-400" />
                         </div>
-                      </div>
-                      <div className="mt-3 sm:mt-0 flex items-center justify-between sm:justify-end gap-3 sm:pl-[68px]">
-                        <Badge className={`${getStatusColor(booking.status)} flex items-center gap-1`}>
-                          {getStatusIcon(booking.status)}
-                          {booking.status}
-                        </Badge>
-                        <ChevronRight className="h-4 w-4 text-gray-400" />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="py-12 text-center">
@@ -361,7 +360,7 @@ export default function AdminDashboard() {
                   size="sm"
                 >
                   <Calendar className="h-4 w-4 mr-2" />
-                  Manage Bookings
+                  Bookings
                 </Button>
                 <Button 
                   onClick={() => navigate('/admin/payments')} 
@@ -370,7 +369,25 @@ export default function AdminDashboard() {
                   size="sm"
                 >
                   <CreditCard className="h-4 w-4 mr-2" />
-                  Review Payments
+                  Payments
+                </Button>
+                <Button
+                  onClick={() => navigate('/admin/orders')}
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Orders
+                </Button>
+                <Button
+                  onClick={() => navigate('/admin/schedule')}
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Schedule
                 </Button>
                 <Button 
                   onClick={() => navigate('/admin/services')} 
@@ -379,44 +396,26 @@ export default function AdminDashboard() {
                   size="sm"
                 >
                   <Activity className="h-4 w-4 mr-2" />
-                  Manage Services
+                  Services
                 </Button>
-                <Button 
-                  onClick={() => navigate('/admin/schedule')} 
-                  variant="outline" 
+                <Button
+                  onClick={() => navigate('/admin/shop')}
+                  variant="outline"
                   className="w-full justify-start"
                   size="sm"
                 >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Set Availability
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                  Shop
                 </Button>
-              </CardContent>
-            </Card>
-
-            {/* Appointment Types Summary */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Booking Overview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Video className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Online</span>
-                  </div>
-                  <span className="text-lg font-bold text-blue-600">
-                    {stats?.bookingOverview?.online ?? 0}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-green-600" />
-                    <span className="text-sm font-medium text-green-900">On-Site</span>
-                  </div>
-                  <span className="text-lg font-bold text-green-600">
-                    {stats?.bookingOverview?.onSite ?? 0}
-                  </span>
-                </div>
+                <Button
+                  onClick={() => navigate('/admin/shop?view=access')}
+                  variant="outline"
+                  className="w-full justify-start"
+                  size="sm"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Access of Shops
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -438,7 +437,10 @@ export default function AdminDashboard() {
               <div className="py-8 text-center text-gray-500">Loading bookings...</div>
             ) : stats?.recentBookings?.length ? (
               <div className="space-y-3">
-                {stats.recentBookings.slice(0, 6).map((booking) => (
+                {stats.recentBookings.slice(0, 6).map((booking) => {
+                  const statusInfo = getDashboardBookingStatusInfo(booking);
+
+                  return (
                   <div
                     key={booking.id}
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-gray-100 rounded-lg hover:border-[#2c4d5c] hover:shadow-sm transition-all cursor-pointer"
@@ -460,13 +462,13 @@ export default function AdminDashboard() {
                         <Clock className="h-4 w-4 text-gray-400" />
                         {formatTime(booking.booking_time)}
                       </div>
-                      <Badge className={`${getStatusColor(booking.status)} flex items-center gap-1`}>
-                        {getStatusIcon(booking.status)}
-                        {booking.status}
+                      <Badge className={statusInfo.className}>
+                        {statusInfo.label}
                       </Badge>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="py-12 text-center">
